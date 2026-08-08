@@ -1,13 +1,12 @@
 <?php
 
-use App\Models\Session;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
-it('logs in with username and password using unique opaque sessions', function () {
+it('logs in with username and password using unique sanctum tokens', function () {
     $user = User::factory()->create([
         'username' => 'owner',
         'password_hash' => 'secret-password',
@@ -23,11 +22,9 @@ it('logs in with username and password using unique opaque sessions', function (
         'password' => 'secret-password',
     ])->assertSuccessful();
 
-    expect($first->json('token'))->toHaveLength(64)
-        ->not->toBe($second->json('token'))
-        ->and(Session::where('token', $first->json('token'))->first())
-        ->user_id->toBe($user->id)
-        ->expires_at->isFuture()->toBeTrue();
+    expect($first->json('token'))->not->toBeEmpty()
+        ->and($first->json('token'))->not->toBe($second->json('token'))
+        ->and($first->json('expires_at'))->not->toBeNull();
 });
 
 it('rejects invalid credentials', function () {
@@ -54,7 +51,7 @@ it('rejects login for inactive users', function () {
     ])->assertForbidden();
 });
 
-it('returns the user resolved by the opaque session middleware', function () {
+it('returns the user resolved by sanctum', function () {
     ['user' => $user, 'token' => $token] = authenticatedSession();
 
     $this->withToken($token)
@@ -63,16 +60,18 @@ it('returns the user resolved by the opaque session middleware', function () {
         ->assertJsonPath('id', $user->id);
 });
 
-it('rejects invalid opaque sessions', function (string $case) {
+it('rejects invalid tokens', function (string $case) {
     $user = User::factory()->create(['is_active' => $case !== 'inactive']);
-
     $token = match ($case) {
         'missing' => null,
-        'unknown' => Str::random(64),
-        'expired' => Session::factory()->for($user)->expired()->create()->token,
-        'revoked' => Session::factory()->for($user)->revoked()->create()->token,
-        'inactive' => Session::factory()->for($user)->create()->token,
+        'unknown' => '1|'.Str::random(40),
+        'expired' => $user->createToken('test', ['*'], now()->subDay())->plainTextToken,
+        'inactive' => $user->createToken('test', ['*'], now()->addDays(30))->plainTextToken,
     };
+
+    if ($case === 'inactive') {
+        $user->update(['is_active' => false]);
+    }
 
     $request = $this;
     if ($token !== null) {
@@ -80,16 +79,14 @@ it('rejects invalid opaque sessions', function (string $case) {
     }
 
     $request->getJson('/api/user')->assertUnauthorized();
-})->with(['missing', 'unknown', 'expired', 'revoked', 'inactive']);
+})->with(['missing', 'unknown', 'expired', 'inactive']);
 
-it('revokes the current opaque session on logout', function () {
-    ['session' => $session, 'token' => $token] = authenticatedSession();
+it('revokes the current token on logout', function () {
+    ['user' => $user, 'token' => $token] = authenticatedSession();
 
     $this->withToken($token)
         ->postJson('/api/logout')
         ->assertSuccessful();
-
-    expect($session->fresh()->revoked_at)->not->toBeNull();
 
     $this->withToken($token)
         ->getJson('/api/user')

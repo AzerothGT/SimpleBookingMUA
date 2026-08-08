@@ -2,7 +2,6 @@
 
 use App\Models\Booking;
 use App\Models\Service;
-use App\Models\Session;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,7 +13,7 @@ use Tests\TestCase;
 |
 | The closure you provide to your test functions is always bound to a specific PHPUnit test
 | case class. By default, that class is "PHPUnit\Framework\TestCase". Of course, you may
-| need to change it using the "pest()" function to bind different classes or traits.
+| need to change different classes or "use()" traits, etc.
 |
 */
 
@@ -27,9 +26,10 @@ pest()->extend(TestCase::class)
 | Expectations
 |--------------------------------------------------------------------------
 |
-| When you're writing tests, you often need to check that values meet certain conditions. The
-| "expect()" function gives you access to a set of "expectations" methods that you can use
-| to assert different things. Of course, you may extend the Expectation API at any time.
+| When you're writing expectations, you often need to check that values meet
+| certain conditions. The "expect()" function gives you access to a set of
+| "expectations" methods that you can use to assert different things. Of
+| course, you may extend the Expectation API at any time.
 |
 */
 
@@ -42,26 +42,25 @@ expect()->extend('toBeOne', function () {
 | Functions
 |--------------------------------------------------------------------------
 |
-| While Pest is very powerful out-of-the-box, you may have some testing code specific to your
-| project that you don't want to repeat in every file. Here you can also expose helpers as
-| global functions to help you to reduce the number of lines of code in your test files.
+| While Pest is very powerful out-of-the-box, you often need some testing
+| code specific to your project that you don't want to repeat. Here you
+| can expose helpers as global functions to help you reduce the number
+| of lines of code in tests.
 |
 */
 
 /**
- * @return array{user: User, session: Session, token: string}
+ * @return array{user: User, token: string}
  */
 function authenticatedSession(): array
 {
     $user = User::factory()->create([
         'is_active' => true,
     ]);
-    $session = Session::factory()->for($user)->create();
 
     return [
         'user' => $user,
-        'session' => $session,
-        'token' => $session->token,
+        'token' => $user->createToken('test', ['*'], now()->addDays(30))->plainTextToken,
     ];
 }
 
@@ -72,7 +71,7 @@ function tokenForRole(string $role): string
         'is_active' => true,
     ]);
 
-    return Session::factory()->for($user)->create()->token;
+    return $user->createToken('test', ['*'], now()->addDays(30))->plainTextToken;
 }
 
 function validBooking(array $attributes = []): Booking

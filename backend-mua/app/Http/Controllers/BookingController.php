@@ -29,7 +29,7 @@ class BookingController extends Controller
         security: [['session' => []]],
         parameters: [
             new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['pending', 'confirmed', 'done', 'cancelled'])),
-            new OA\Parameter(name: 'user_id', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'uuid')),
+            new OA\Parameter(name: 'client_name', in: 'query', required: false, schema: new OA\Schema(type: 'string'), description: 'Cari berdasarkan nama klien (partial match)'),
             new OA\Parameter(name: 'client_phone', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
         ],
         responses: [
@@ -44,7 +44,7 @@ class BookingController extends Controller
         $bookings = Booking::query()
             ->with(['user', 'service', 'transactions'])
             ->when($request->status, fn ($q, $status) => $q->where('status', $status))
-            ->when($request->user_id, fn ($q, $userId) => $q->where('user_id', $userId))
+            ->when($request->client_name, fn ($q, $name) => $q->where('client_name', 'like', "%{$name}%"))
             ->when($request->client_phone, fn ($q, $phone) => $q->where('client_phone', $phone))
             ->latest()
             ->paginate();

@@ -4,12 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
-use App\Models\Session;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 
 #[OA\Info(
@@ -19,10 +17,10 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Server(url: '/api')]
 #[OA\SecurityScheme(
-    securityScheme: 'session',
+    securityScheme: 'sanctum',
     type: 'http',
     scheme: 'bearer',
-    description: 'Bearer token dari response login'
+    description: 'Bearer token dari response login (Sanctum)'
 )]
 class AuthController extends Controller
 {
@@ -57,15 +55,11 @@ class AuthController extends Controller
             return response()->json(['message' => 'Account deactivated'], 403);
         }
 
-        $session = Session::create([
-            'user_id' => $user->id,
-            'token' => $token = Str::random(64),
-            'expires_at' => now()->addDays(30),
-        ]);
+        $token = $user->createToken('auth-token', ['*'], now()->addDays(30));
 
         return response()->json([
-            'token' => $token,
-            'expires_at' => $session->expires_at,
+            'token' => $token->plainTextToken,
+            'expires_at' => $token->accessToken->expires_at,
             'user' => UserResource::make($user),
         ]);
     }
@@ -74,7 +68,7 @@ class AuthController extends Controller
         path: '/logout',
         summary: 'Logout user (revoke token)',
         tags: ['Auth'],
-        security: [['session' => []]],
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Logged out successfully'),
             new OA\Response(response: 401, description: 'Unauthenticated'),
@@ -82,9 +76,7 @@ class AuthController extends Controller
     )]
     public function logout(Request $request): JsonResponse
     {
-        /** @var Session $session */
-        $session = $request->attributes->get('auth_session');
-        $session->update(['revoked_at' => now()]);
+        $request->attributes->get('access_token')->delete();
 
         return response()->json(['message' => 'Logged out successfully']);
     }
@@ -93,7 +85,7 @@ class AuthController extends Controller
         path: '/user',
         summary: 'Get current authenticated user',
         tags: ['Auth'],
-        security: [['session' => []]],
+        security: [['sanctum' => []]],
         responses: [
             new OA\Response(response: 200, description: 'Current user data'),
             new OA\Response(response: 401, description: 'Unauthenticated'),

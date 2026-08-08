@@ -13,19 +13,19 @@ use Illuminate\Support\Facades\Schema;
 uses(RefreshDatabase::class);
 
 it('uses the ERD table and timestamp definitions', function () {
-    expect(Schema::hasTable('sessions'))->toBeTrue()
+    expect(Schema::hasTable('personal_access_tokens'))->toBeTrue()
+        ->and(Schema::hasTable('sessions'))->toBeFalse()
         ->and(Schema::hasTable('auth_sessions'))->toBeFalse()
         ->and(Schema::hasColumn('users', 'updated_at'))->toBeFalse()
-        ->and(Schema::hasColumn('sessions', 'updated_at'))->toBeFalse()
         ->and(Schema::hasColumn('services', 'updated_at'))->toBeFalse()
         ->and(Schema::hasColumn('service_images', 'updated_at'))->toBeFalse()
         ->and(Schema::hasColumn('booking_tasks', 'updated_at'))->toBeFalse()
         ->and(Schema::hasColumn('activity_logs', 'updated_at'))->toBeFalse();
 });
 
-it('does not point the browser session driver at the opaque token table', function () {
+it('does not store session payloads in the database', function () {
     expect(config('session.driver'))->not->toBe('database')
-        ->and(Schema::hasColumn('sessions', 'payload'))->toBeFalse();
+        ->and(Schema::hasTable('sessions'))->toBeFalse();
 });
 
 it('defines ERD constraints and indexes', function () {
@@ -67,7 +67,6 @@ it('defines required foreign keys and indexes', function () {
     expect($indexes)->toContain('bookings_user_id_starts_at_index')
         ->and($logIndexes)->toContain('activity_logs_entity_type_entity_id_index')
         ->and($deleteRules)->toMatchArray([
-            'sessions.user_id' => 'CASCADE',
             'service_images.service_id' => 'CASCADE',
             'bookings.user_id' => 'RESTRICT',
             'bookings.service_id' => 'RESTRICT',

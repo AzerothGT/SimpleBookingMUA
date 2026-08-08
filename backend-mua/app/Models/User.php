@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'username', 'phone', 'password_hash', 'instagram_url', 'role', 'is_active'])]
 #[Hidden(['password_hash'])]
@@ -20,12 +21,7 @@ class User extends Authenticatable
     public const UPDATED_AT = null;
 
     /** @use HasFactory<UserFactory> */
-    use HasFactory, HasUuids, Notifiable;
-
-    public function sessions(): HasMany
-    {
-        return $this->hasMany(Session::class);
-    }
+    use HasApiTokens, HasFactory, HasUuids, Notifiable;
 
     public function bookings(): HasMany
     {

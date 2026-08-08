@@ -13,7 +13,7 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('user_id')->nullable()->index();
             $table->uuid('service_id')->index();
-            $table->string('client_name');
+            $table->string('client_name')->index();
             $table->string('client_phone');
             $table->text('client_address');
             $table->string('maps_url')->nullable();

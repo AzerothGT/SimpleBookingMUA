@@ -3,23 +3,18 @@
 use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\ServiceImage;
-use App\Models\Session;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('creates an active user with a valid opaque session helper', function () {
-    ['user' => $user, 'session' => $session, 'token' => $token] = authenticatedSession();
+it('creates an active user with a valid sanctum token helper', function () {
+    ['user' => $user, 'token' => $token] = authenticatedSession();
 
     expect($user)
         ->toBeInstanceOf(User::class)
         ->is_active->toBeTrue()
-        ->and($session)->toBeInstanceOf(Session::class)
-        ->and($session->user_id)->toBe($user->id)
-        ->and($session->revoked_at)->toBeNull()
-        ->and($session->expires_at->isFuture())->toBeTrue()
-        ->and($token)->toBe($session->token)->toHaveLength(64);
+        ->and($token)->toBeString()->not->toBeEmpty();
 });
 
 it('creates a valid future booking helper', function () {

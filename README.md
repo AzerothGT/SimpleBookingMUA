@@ -22,7 +22,7 @@ Backend Laravel 13, MySQL, autentikasi opaque bearer token, dokumentasi OpenAPI 
 | Runtime | PHP 8.3+ |
 | Framework | Laravel 13 |
 | Database | MySQL 8+ (test suite jalan di SQLite in-memory) |
-| Auth | Opaque bearer token di tabel `sessions` (tanpa Sanctum/JWT) |
+| Auth | Laravel Sanctum (bearer token, SPA stateful domains disabled) |
 | Payment | Midtrans Snap |
 | Docs | `darkaonline/l5-swagger` + attribute `OpenApi\Attributes` |
 | Test | Pest 5 |

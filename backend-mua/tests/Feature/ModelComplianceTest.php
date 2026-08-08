@@ -4,7 +4,6 @@ use App\Models\ActivityLog;
 use App\Models\Booking;
 use App\Models\BookingTask;
 use App\Models\Service;
-use App\Models\Session;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
@@ -54,12 +53,15 @@ it('uses polymorphic service activity logs and keeps booking context logs separa
         ->and($booking->entityActivityLogs)->toHaveCount(1);
 });
 
-it('requires the related user to be active for a session to be active', function () {
-    $activeSession = Session::factory()->create();
-    $inactiveSession = Session::factory()->for(User::factory()->inactive())->create();
+it('blocks inactive users from authenticating via sanctum', function () {
+    $activeUser = User::factory()->create(['is_active' => true]);
+    $inactiveUser = User::factory()->inactive()->create();
 
-    expect($activeSession->isActive())->toBeTrue()
-        ->and($inactiveSession->isActive())->toBeFalse();
+    $activeToken = $activeUser->createToken('test', ['*'], now()->addDays(30))->plainTextToken;
+    $inactiveToken = $inactiveUser->createToken('test', ['*'], now()->addDays(30))->plainTextToken;
+
+    $this->withToken($activeToken)->getJson('/api/user')->assertSuccessful();
+    $this->withToken($inactiveToken)->getJson('/api/user')->assertUnauthorized();
 });
 
 it('keeps task completion timestamp synchronized', function () {

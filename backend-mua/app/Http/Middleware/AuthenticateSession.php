@@ -2,10 +2,11 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Session;
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthenticateSession
@@ -18,21 +19,22 @@ class AuthenticateSession
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
-        $session = Session::query()
-            ->with('user')
-            ->where('token', $token)
-            ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
-            ->whereHas('user', fn ($query) => $query->active())
-            ->first();
+        $accessToken = PersonalAccessToken::findToken($token);
 
-        if (! $session) {
+        if (! $accessToken || ($accessToken->expires_at && $accessToken->expires_at->isPast())) {
             return response()->json(['message' => 'Invalid or expired token.'], 401);
         }
 
-        $request->attributes->set('auth_session', $session);
-        $request->setUserResolver(fn () => $session->user);
-        Auth::setUser($session->user);
+        $user = User::active()->find($accessToken->tokenable_id);
+
+        if (! $user) {
+            return response()->json(['message' => 'Invalid or expired token.'], 401);
+        }
+
+        $user->withAccessToken($accessToken);
+        $request->attributes->set('access_token', $accessToken);
+        $request->setUserResolver(fn () => $user);
+        Auth::setUser($user);
 
         return $next($request);
     }
