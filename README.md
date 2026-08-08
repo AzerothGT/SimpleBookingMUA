@@ -44,7 +44,7 @@ app/
 ├── Contracts/        PaymentGateway (Midtrans di-swap saat test)
 ├── Http/
 │   ├── Controllers/  HTTP + attribute OpenAPI
-│   ├── Middleware/   AuthenticateSession (resolusi opaque token)
+│   ├── Middleware/   AuthenticateSession (validasi Sanctum token + active user)
 │   ├── Requests/     Validasi & guard field per-role
 │   └── Resources/    Bentuk response JSON
 ├── Models/           Eloquent, UUID primary key
@@ -86,7 +86,7 @@ php artisan serve
 
 Buka `http://127.0.0.1:8000` — otomatis redirect ke Swagger UI.
 
-> **Jangan set `SESSION_DRIVER=database`.** Tabel `sessions` di project ini adalah tabel opaque auth token dari ERD, bukan tabel session Laravel. Driver `database` akan mencari kolom `payload` dan crash. `config/session.php` sudah hardcode `file` sebagai pengaman.
+> **Auth pakai Sanctum.** Token disimpan di tabel `personal_access_tokens`. Middleware kustom `AuthenticateSession` memvalidasi token + status aktif user di setiap request (per-request validation, bukan cached guard).
 
 ## Akun seed
 
@@ -118,7 +118,7 @@ php artisan l5-swagger:generate
 
 ## Autentikasi
 
-Login mengembalikan token acak 64 karakter yang disimpan di tabel `sessions`. Tidak ada JWT — token opaque di database sudah cukup dan bisa dicabut seketika.
+Login menggunakan Laravel Sanctum. Token disimpan di tabel `personal_access_tokens` dengan expiry 30 hari. Middleware `AuthenticateSession` memvalidasi token + status `is_active` user di setiap request.
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/login \
@@ -128,7 +128,7 @@ curl -X POST http://127.0.0.1:8000/api/login \
 
 ```json
 {
-  "token": "9x1kQ...",
+  "token": "1|9x1kQ...",
   "expires_at": "2026-09-06T00:00:00.000000Z",
   "user": { "id": "...", "name": "Owner", "role": "owner" }
 }
@@ -137,10 +137,10 @@ curl -X POST http://127.0.0.1:8000/api/login \
 Kirim di setiap request terproteksi:
 
 ```
-Authorization: Bearer 9x1kQ...
+Authorization: Bearer 1|9x1kQ...
 ```
 
-Session dianggap valid bila `revoked_at` null, `expires_at` belum lewat, dan user `is_active`. `POST /api/logout` mengisi `revoked_at`.
+Token dianggap valid bila belum expired dan user `is_active`. `POST /api/logout` menghapus token dari database.
 
 ## Endpoint utama
 
@@ -234,7 +234,7 @@ vendor/bin/pint --test
 
 ## Status
 
-119 test lulus, 612 assertion, Pint bersih di 125 file. Seluruh 15 phase compliance ERD selesai — rinciannya di [`docs/backend-erd-compliance-todo.md`](docs/backend-erd-compliance-todo.md).
+118 test lulus, 605 assertion (7 skipped — MySQL-only schema tests).
 
 Belum ada: frontend, refund flow, notifikasi WhatsApp/email, ownership scoping booking per staff (setiap user aktif saat ini bisa mengubah booking mana pun).
 
