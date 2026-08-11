@@ -9,10 +9,12 @@ use App\Actions\Bookings\UpdateBooking;
 use App\Http\Requests\AssignStaffRequest;
 use App\Http\Requests\ChangeBookingStatusRequest;
 use App\Http\Requests\CheckScheduleRequest;
+use App\Http\Requests\ScheduleCalendarRequest;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -242,6 +244,44 @@ class BookingController extends Controller
         return BookingResource::make($booking->load(['user', 'service']));
     }
 
+    #[OA\Get(
+        path: '/schedule/calendar',
+        summary: 'Get busy schedules for a calendar range',
+        tags: ['Bookings'],
+        parameters: [
+            new OA\Parameter(name: 'from', in: 'query', required: true, schema: new OA\Schema(type: 'string', format: 'date'), description: 'Start date'),
+            new OA\Parameter(name: 'to', in: 'query', required: true, schema: new OA\Schema(type: 'string', format: 'date'), description: 'End date'),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Busy schedule ranges grouped by start date'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ]
+    )]
+    public function calendar(ScheduleCalendarRequest $request): JsonResponse
+    {
+        $rangeStart = $request->date('from')->startOfDay();
+        $rangeEnd = $request->date('to')->endOfDay();
+
+        $bookings = $this->confirmedPaidSchedules()
+            ->where('starts_at', '<=', $rangeEnd)
+            ->where('ends_at', '>=', $rangeStart)
+            ->orderBy('starts_at')
+            ->get(['starts_at', 'ends_at']);
+
+        $data = $bookings
+            ->groupBy(fn (Booking $booking) => $booking->starts_at->toDateString())
+            ->map(fn ($ranges, string $date) => [
+                'date' => $date,
+                'busy_ranges' => $ranges->map(fn (Booking $booking) => [
+                    'starts_at' => $booking->starts_at,
+                    'ends_at' => $booking->ends_at,
+                ])->values(),
+            ])
+            ->values();
+
+        return response()->json(['data' => $data]);
+    }
+
     #[OA\Post(
         path: '/schedule/check',
         summary: 'Check busy schedule for a date',
@@ -256,9 +296,7 @@ class BookingController extends Controller
     )]
     public function checkAvailability(CheckScheduleRequest $request): JsonResponse
     {
-        $query = Booking::query()
-            ->whereIn('status', ['pending', 'confirmed'])
-            ->whereNotNull('starts_at')
+        $query = $this->confirmedPaidSchedules()
             ->whereDate('starts_at', $request->client_requested_date);
 
         if ($request->user_id) {
@@ -268,5 +306,17 @@ class BookingController extends Controller
         $busy = $query->orderBy('starts_at')->get(['starts_at', 'ends_at']);
 
         return response()->json($busy);
+    }
+
+    private function confirmedPaidSchedules(): Builder
+    {
+        return Booking::query()
+            ->where('status', 'confirmed')
+            ->whereNotNull('starts_at')
+            ->whereNotNull('ends_at')
+            ->whereHas('transactions', fn (Builder $query) => $query
+                ->whereIn('transaction_status', ['capture', 'settlement'])
+                ->where('fraud_status', 'accept')
+                ->whereNotNull('paid_at'));
     }
 }

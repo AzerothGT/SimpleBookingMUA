@@ -26,10 +26,11 @@ Landing page tidak lagi memprioritaskan testimonial, portfolio, section “kenap
 
 1. Header minimal: nama MUA, area layanan, dan CTA `Cek jadwal & ajukan booking`.
 2. Hero singkat dengan manfaat utama dan penjelasan bahwa booking belum menjadi konfirmasi final.
-3. Booking flow utama dalam tiga tahap yang terlihat:
-   - `1 Pilih jadwal`
-   - `2 Isi detail`
-   - `3 Tinjau & kirim`
+3. Booking flow utama dalam empat tahap yang terlihat:
+   - `1 Pilih layanan`
+   - `2 Pilih tanggal`
+   - `3 Isi detail`
+   - `4 Kirim`
 4. Daftar layanan dan harga mulai.
 5. Informasi singkat area layanan dan biaya perjalanan.
 6. FAQ terbatas pada hambatan booking.

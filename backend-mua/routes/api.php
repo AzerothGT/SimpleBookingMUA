@@ -24,6 +24,7 @@ Route::apiResource('services', ServiceController::class)->only(['index', 'show']
 // Bookings (client-facing)
 Route::post('/bookings', [BookingController::class, 'store']);
 Route::post('/schedule/check', [BookingController::class, 'checkAvailability']);
+Route::get('/schedule/calendar', [BookingController::class, 'calendar']);
 
 /*
 |--------------------------------------------------------------------------

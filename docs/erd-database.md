@@ -2,7 +2,7 @@
 
 ```mermaid
 erDiagram
-    users ||--o{ sessions : has
+    users ||--o{ personal_access_tokens : has
     users ||--o{ bookings : handles
     users ||--o{ transactions : creates
     users ||--o{ activity_logs : performs
@@ -25,13 +25,16 @@ erDiagram
         timestamp created_at
     }
 
-    sessions {
-        uuid id PK
-        uuid user_id FK
-        varchar token UK "random opaque token"
+    personal_access_tokens {
+        bigint id PK
+        uuidmorphs tokenable "morphTo: users"
+        text name "label token"
+        varchar token UK "hash 64"
+        text abilities "scope, nullable"
+        timestamp last_used_at
         timestamp expires_at
-        timestamp revoked_at "null = aktif"
         timestamp created_at
+        timestamp updated_at
     }
 
     services {
@@ -119,7 +122,7 @@ erDiagram
 
 | Dari | Ke | Kardinalitas | Arti |
 |---|---|---|---|
-| `users` | `sessions` | 1—N | token login |
+| `users` | `personal_access_tokens` | 1—N | token login Sanctum |
 | `users` | `bookings` | 1—N | staff handle booking |
 | `services` | `bookings` | 1—N | jasa yang dipesan |
 | `services` | `service_images` | 1—N | foto jasa (upload atau link) |
@@ -243,7 +246,7 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 ### FK & cascade
 | Child | Parent | ON DELETE |
 |---|---|---|
-| `sessions.user_id` | `users` | CASCADE |
+| `personal_access_tokens.tokenable_id` | `users` (morph) | CASCADE |
 | `bookings.user_id` | `users` | RESTRICT |
 | `bookings.service_id` | `services` | RESTRICT |
 | `service_images.service_id` | `services` | CASCADE |
@@ -303,10 +306,11 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 ## Catatan umum
 
 - `users` = tim internal (`owner` \| `admin` \| `staff`)
-- Login: `username` + `password_hash` → buat row `sessions` (`token` unik, `expires_at`)
-- Auth request: header/cookie bawa `token` → cari session aktif (`revoked_at` null, `expires_at > now()`, user `is_active`)
-- Logout: set `revoked_at = now()` (atau hapus row)
-- Skip JWT — opaque token di DB cukup; ganti JWT kalau stateless scale butuh
+- Auth: Laravel Sanctum — `personal_access_tokens` (morphTo `users`, token hash 64, `expires_at` 30 hari)
+- Login: `username` + `password_hash` → buat row `personal_access_tokens`
+- Auth request: header `Authorization: Bearer <token>` → middleware `AuthenticateSession` cari token aktif (`expires_at > now()`, user `is_active`)
+- Logout: hapus row token
+- Skip JWT — opaque token Sanctum di DB cukup; ganti JWT kalau stateless scale butuh
 - `users.instagram_url` — opsional
 - `services`: name, price — **tanpa duration**; foto di `service_images` (1—N, upload atau link eksternal, satu `is_cover`)
 - Durasi aktual = `ends_at - starts_at` setelah staff set
@@ -322,7 +326,7 @@ ERD di atas adalah spesifikasi target. Backend Laravel (`backend-mua/`) sengaja 
 
 | Bagian ERD | Implementasi | Alasan |
 |---|---|---|
-| `timestamp created_at` saja pada `users`, `sessions`, `services`, `service_images`, `booking_tasks`, `activity_logs` | Kolom `updated_at` tidak dibuat; model memakai `public const UPDATED_AT = null` | Tabel append-only/rarely-mutated; menghindari kolom mati |
+| `sessions` (opaque token table) | Laravel Sanctum `personal_access_tokens` (morphTo, bigint id, hash token) | Sanctum adalah standar Laravel untuk API token; tidak perlu reinvent |
 | `client_requested_ends_at` "generated: date+time" | Kolom `timestamp` biasa, dihitung di `CreateBooking` | MySQL generated column tidak bisa dipakai bersama FK yang dibutuhkan di tabel yang sama (error 1215) |
 | `activity_logs.user_id` FK wajib | Nullable | Booking publik tidak punya actor, tapi `booking.created` tetap harus tercatat |
 | CHECK `ends_at > starts_at`, `gross_amount > 0`, `role IN (...)` | Dibuat hanya saat driver MySQL | SQLite (koneksi test default) tidak mendukung `ALTER TABLE ADD CONSTRAINT`; validasi setara ada di Form Request + Action |

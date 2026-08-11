@@ -2,6 +2,7 @@
 
 use App\Models\Booking;
 use App\Models\Service;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -104,25 +105,183 @@ it('sets safe defaults for public bookings', function () {
         ->and($booking->ends_at->equalTo($booking->client_requested_ends_at))->toBeTrue();
 });
 
-it('returns busy windows by requested date without blocking a proposal', function () {
-    $service = Service::factory()->create(['is_active' => true]);
-    $staff = User::factory()->create();
-
-    Booking::factory()->for($staff)->create([
+it('returns only confirmed paid schedules in the public calendar', function () {
+    $includedSettlement = Booking::factory()->create([
+        'client_name' => 'Private Settlement Client',
+        'client_phone' => '081111111111',
         'status' => 'confirmed',
         'starts_at' => '2026-08-10 10:00:00',
         'ends_at' => '2026-08-10 12:00:00',
     ]);
-    Booking::factory()->for($staff)->create([
-        'status' => 'cancelled',
+    Transaction::factory()->settled()->for($includedSettlement)->create();
+
+    $includedCapture = Booking::factory()->create([
+        'client_name' => 'Private Capture Client',
+        'status' => 'confirmed',
         'starts_at' => '2026-08-10 13:00:00',
         'ends_at' => '2026-08-10 14:00:00',
     ]);
+    Transaction::factory()->for($includedCapture)->create([
+        'transaction_status' => 'capture',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+    ]);
+
+    $wrongFraudStatus = Booking::factory()->create([
+        'status' => 'confirmed',
+        'starts_at' => '2026-08-11 08:00:00',
+        'ends_at' => '2026-08-11 09:00:00',
+    ]);
+    Transaction::factory()->for($wrongFraudStatus)->create([
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'challenge',
+        'paid_at' => now(),
+    ]);
+
+    $missingPaidAt = Booking::factory()->create([
+        'status' => 'confirmed',
+        'starts_at' => '2026-08-11 10:00:00',
+        'ends_at' => '2026-08-11 11:00:00',
+    ]);
+    Transaction::factory()->for($missingPaidAt)->create([
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'accept',
+        'paid_at' => null,
+    ]);
+
+    $invalidTransactionStatus = Booking::factory()->create([
+        'status' => 'confirmed',
+        'starts_at' => '2026-08-11 12:00:00',
+        'ends_at' => '2026-08-11 13:00:00',
+    ]);
+    Transaction::factory()->for($invalidTransactionStatus)->create([
+        'transaction_status' => 'pending',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+    ]);
+
+    foreach (['pending', 'cancelled'] as $status) {
+        $excluded = Booking::factory()->create([
+            'status' => $status,
+            'starts_at' => '2026-08-12 10:00:00',
+            'ends_at' => '2026-08-12 12:00:00',
+        ]);
+        Transaction::factory()->settled()->for($excluded)->create();
+    }
+
+    $unscheduled = Booking::factory()->create([
+        'status' => 'confirmed',
+        'starts_at' => null,
+        'ends_at' => null,
+    ]);
+    Transaction::factory()->settled()->for($unscheduled)->create();
+
+    $missingEnd = Booking::factory()->create([
+        'status' => 'confirmed',
+        'starts_at' => '2026-08-13 10:00:00',
+        'ends_at' => null,
+    ]);
+    Transaction::factory()->settled()->for($missingEnd)->create();
+
+    $outOfRange = Booking::factory()->create([
+        'status' => 'confirmed',
+        'starts_at' => '2026-09-02 10:00:00',
+        'ends_at' => '2026-09-02 12:00:00',
+    ]);
+    Transaction::factory()->settled()->for($outOfRange)->create();
+
+    $this->getJson('/api/schedule/calendar?from=2026-08-01&to=2026-08-31')
+        ->assertSuccessful()
+        ->assertExactJson([
+            'data' => [
+                [
+                    'date' => '2026-08-10',
+                    'busy_ranges' => [
+                        [
+                            'starts_at' => '2026-08-10T10:00:00.000000Z',
+                            'ends_at' => '2026-08-10T12:00:00.000000Z',
+                        ],
+                        [
+                            'starts_at' => '2026-08-10T13:00:00.000000Z',
+                            'ends_at' => '2026-08-10T14:00:00.000000Z',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+});
+
+it('includes schedules overlapping the calendar range boundary', function () {
+    $overlapping = Booking::factory()->create([
+        'status' => 'confirmed',
+        'starts_at' => '2026-07-31 23:00:00',
+        'ends_at' => '2026-08-01 00:00:00',
+    ]);
+    Transaction::factory()->settled()->for($overlapping)->create();
+
+    $this->getJson('/api/schedule/calendar?from=2026-08-01&to=2026-08-31')
+        ->assertSuccessful()
+        ->assertExactJson([
+            'data' => [
+                [
+                    'date' => '2026-07-31',
+                    'busy_ranges' => [
+                        [
+                            'starts_at' => '2026-07-31T23:00:00.000000Z',
+                            'ends_at' => '2026-08-01T00:00:00.000000Z',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+});
+
+it('validates public calendar ranges', function (string $query, array $errors) {
+    $this->getJson('/api/schedule/calendar?'.$query)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors($errors);
+})->with([
+    'required dates' => ['', ['from', 'to']],
+    'valid dates' => ['from=not-a-date&to=also-not-a-date', ['from', 'to']],
+    'ordered dates' => ['from=2026-08-10&to=2026-08-09', ['to']],
+    'maximum one month' => ['from=2026-08-01&to=2026-09-02', ['to']],
+    'month-end overflow' => ['from=2026-01-31&to=2026-03-02', ['to']],
+]);
+
+it('returns busy windows by requested date without blocking a proposal', function () {
+    $service = Service::factory()->create(['is_active' => true]);
+    $staff = User::factory()->create();
+
+    $confirmedPaid = Booking::factory()->for($staff)->create([
+        'status' => 'confirmed',
+        'starts_at' => '2026-08-10 10:00:00',
+        'ends_at' => '2026-08-10 12:00:00',
+    ]);
+    Transaction::factory()->settled()->for($confirmedPaid)->create();
+
+    $confirmedUnpaid = Booking::factory()->for($staff)->create([
+        'status' => 'confirmed',
+        'starts_at' => '2026-08-10 12:00:00',
+        'ends_at' => '2026-08-10 13:00:00',
+    ]);
+    Transaction::factory()->for($confirmedUnpaid)->create();
+
+    $pendingPaid = Booking::factory()->for($staff)->create([
+        'status' => 'pending',
+        'starts_at' => '2026-08-10 13:00:00',
+        'ends_at' => '2026-08-10 14:00:00',
+    ]);
+    Transaction::factory()->settled()->for($pendingPaid)->create();
 
     $this->postJson('/api/schedule/check', [
         'client_requested_date' => '2026-08-10',
         'user_id' => $staff->id,
-    ])->assertSuccessful()->assertJsonCount(1);
+    ])->assertSuccessful()->assertExactJson([
+        [
+            'starts_at' => '2026-08-10T10:00:00.000000Z',
+            'ends_at' => '2026-08-10T12:00:00.000000Z',
+        ],
+    ]);
 
     $this->postJson('/api/bookings', publicBookingPayload($service))
         ->assertCreated();
