@@ -69,9 +69,7 @@
   .progress i { @apply not-italic; color: var(--orange); }
   .booking-grid { @apply grid gap-8; grid-template-columns: minmax(0, 1.45fr) minmax(250px, .65fr); }
   .form-panel { min-height: 0; }
-  .panel-intro { @apply mb-6; }
-  .panel-intro h3 { @apply m-0 mb-2 mt-3 font-display text-[37px] font-normal leading-[1.05] tracking-[-.06em]; color: var(--ink); }
-  .panel-intro p, .muted-text, .help-text { @apply text-[13px] leading-[1.7]; color: var(--muted); }
+  .muted-text, .help-text { @apply text-[13px] leading-[1.7]; color: var(--muted); }
   fieldset { @apply m-0 border-0 p-0; }
   legend, .field > span { @apply mb-3 block text-xs font-extrabold leading-[1.5]; color: var(--ink); }
   .detail-group + .detail-group { @apply mt-8; }
@@ -222,8 +220,6 @@
   .booking-grid { @apply gap-5; }
   .section-heading h2 { @apply text-[2.4rem]; }
   .progress { @apply mb-3 mt-3; }
-  .panel-intro { @apply mb-3; }
-  .panel-intro h3 { @apply mb-1 mt-0 text-[29px]; }
   legend, .field > span { @apply mb-2; }
   .service-list { @apply gap-1.5; }
   .selected-summary { @apply mb-3 py-2.5; }

@@ -6,7 +6,7 @@ export default function MyBookings() {
     <main>
       <Navbar />
       <section className="booking-shell min-h-0" aria-labelledby="my-bookings-title">
-        <div className="panel-intro max-w-2xl">
+        <div className="max-w-2xl">
           <span className="eyebrow">Area pengguna</span>
           <h1 id="my-bookings-title" className="m-0 mt-3 font-display text-5xl font-normal tracking-[-.06em]" style={{ color: 'var(--ink)' }}>Booking saya.</h1>
           <p className="mt-5 text-base leading-7" style={{ color: 'var(--muted)' }}>Halaman riwayat booking akan tersedia setelah akun pengguna diaktifkan.</p>

@@ -186,7 +186,7 @@ export default function BookingPage() {
       <Navbar />
       <section className="booking-shell" id="booking" aria-labelledby="booking-title">
         <div className="section-heading">
-          <div><h2 id="booking-title">Cek tanggal & ajukan booking</h2></div>
+          <div><h2 id="booking-title">Ajukan Booking</h2></div>
           <span className="step-counter">0{step} / 04</span>
         </div>
         <div className="progress" aria-label={`Tahap ${step} dari 4`}>
@@ -196,7 +196,7 @@ export default function BookingPage() {
         <form className="booking-grid" onSubmit={submitBooking} noValidate>
           <div className="form-panel">
             {step === 1 && <>
-              <div className="panel-intro"><h3>Pilih layanan</h3></div>
+
               <fieldset>
                 <legend>Layanan makeup</legend>
                 <div className="service-list">
@@ -209,7 +209,7 @@ export default function BookingPage() {
             </>}
 
             {step === 2 && <>
-              <div className="panel-intro"><h3>Pilih tanggal</h3></div>
+
               <div className="selected-summary"><span>{selectedService?.name ?? 'Layanan terpilih'}</span><strong>Pilih tanggal di bawah</strong></div>
               <div className="step-two-layout">
                 <BookingCalendar
@@ -234,7 +234,7 @@ export default function BookingPage() {
             </>}
 
             {step === 3 && <>
-              <div className="panel-intro"><h3>Isi detail</h3></div>
+
               <fieldset className="detail-group">
                 <legend>Kontak</legend>
                 <div className="field-row"><label className="field"><span>Nama lengkap</span><input id="client-name" value={form.name} onChange={(event) => updateField('name', event.target.value)} autoComplete="name" aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'client-name-error' : undefined} />{errors.name && <small id="client-name-error" className="field-error">{errors.name}</small>}</label><label className="field"><span>Nomor telepon</span><input id="client-phone" type="tel" value={form.phone} onChange={(event) => updateField('phone', event.target.value)} autoComplete="tel" aria-invalid={Boolean(errors.phone)} aria-describedby={errors.phone ? 'client-phone-error' : undefined} />{errors.phone && <small id="client-phone-error" className="field-error">{errors.phone}</small>}</label></div>
@@ -251,7 +251,7 @@ export default function BookingPage() {
             </>}
 
             {step === 4 && <>
-              <div className="panel-intro"><h3>Tinjau & kirim</h3></div>
+
               <div className="review-list">
                 <ReviewRow label="Layanan" value={selectedService?.name ?? 'Belum dipilih'} />
                 <ReviewRow label="Tanggal" value={form.date || 'Belum dipilih'} />
