@@ -13,7 +13,7 @@ const fallbackServices = [
 ]
 
 const emptyForm = {
-  serviceId: '',
+  serviceIds: [],
   date: '',
   endTime: '',
   name: '',
@@ -64,9 +64,9 @@ export default function BookingPage() {
     }
   }, [])
 
-  const selectedService = useMemo(
-    () => services.find((service) => String(service.id) === String(form.serviceId)),
-    [services, form.serviceId],
+  const selectedServices = useMemo(
+    () => services.filter((s) => form.serviceIds.includes(String(s.id))),
+    [services, form.serviceIds],
   )
 
   const updateField = (field, value) => {
@@ -80,8 +80,7 @@ export default function BookingPage() {
 
   const validateStepOne = () => {
     const nextErrors = {}
-    if (!form.serviceId) nextErrors.serviceId = 'Pilih layanan.'
-    if (String(form.serviceId).startsWith('fallback-')) nextErrors.serviceId = 'Katalog layanan belum terhubung.'
+    if (!form.serviceIds.length) nextErrors.serviceIds = 'Pilih minimal satu layanan.'
     return nextErrors
   }
 
@@ -198,19 +197,44 @@ export default function BookingPage() {
             {step === 1 && <>
 
               <fieldset>
-                <legend>Layanan makeup</legend>
                 <div className="service-list">
-                  {services.map((service) => <label className={`service-option ${String(form.serviceId) === String(service.id) ? 'selected' : ''}`} key={service.id}><input type="radio" name="service" value={service.id} checked={String(form.serviceId) === String(service.id)} onChange={(event) => updateField('serviceId', event.target.value)} /><span><strong>{service.name}</strong></span><b>{formatPrice(service.price)}</b></label>)}
+                  {services.map((service) => {
+                    const selected = form.serviceIds.includes(String(service.id))
+                    return (
+                      <label className={`service-option ${selected ? 'selected' : ''}`} key={service.id}>
+                        <input type="checkbox" name="service" value={service.id} checked={selected} onChange={(e) => {
+                          const val = String(service.id)
+                          setForm((prev) => ({
+                            ...prev,
+                            serviceIds: e.target.checked ? [...prev.serviceIds, val] : prev.serviceIds.filter((id) => id !== val)
+                          }))
+                        }} />
+                        <span><strong>{service.name}</strong>{service.description ? <small>{service.description}</small> : null}</span>
+                        <b>{formatPrice(service.price)}</b>
+                      </label>
+                    )
+                  })}
                 </div>
                 {servicesLoading && <p className="muted-text">Memuat katalog layanan...</p>}
                 {servicesError && <p className="field-error" role="alert">{servicesError}</p>}
-                {errors.serviceId && <p className="field-error" role="alert">{errors.serviceId}</p>}
+                {errors.serviceIds && <p className="field-error" role="alert">{errors.serviceIds}</p>}
+                {form.serviceIds.length > 0 && (
+                  <div className="cart-summary">
+                    <strong>Layanan terpilih:</strong>
+                    <ul>
+                      {selectedServices.map((s) => (
+                        <li key={s.id}>{s.name} — {formatPrice(s.price)}</li>
+                      ))}
+                    </ul>
+                    <b>Total estimasi: {formatPrice(selectedServices.reduce((sum, s) => sum + s.price, 0))}</b>
+                  </div>
+                )}
               </fieldset>
             </>}
 
             {step === 2 && <>
 
-              <div className="selected-summary"><span>{selectedService?.name ?? 'Layanan terpilih'}</span><strong>Pilih tanggal di bawah</strong></div>
+              <div className="selected-summary"><span>{selectedServices.map(s => s.name).join(', ') || 'Layanan terpilih'}</span><strong>Pilih tanggal di bawah</strong></div>
               <div className="step-two-layout">
                 <BookingCalendar
                   selectedDate={form.date}
@@ -252,13 +276,11 @@ export default function BookingPage() {
 
             {step === 4 && <>
 
+              <p className="review-intro muted-text">Rincian layanan, tanggal, dan lokasi sudah terlihat di panel Ringkasan — cek kembali data kontakmu di bawah.</p>
               <div className="review-list">
-                <ReviewRow label="Layanan" value={selectedService?.name ?? 'Belum dipilih'} />
-                <ReviewRow label="Tanggal" value={form.date || 'Belum dipilih'} />
-                <ReviewRow label="Jam selesai" value={form.endTime || 'Belum diusulkan'} />
                 <ReviewRow label="Nama" value={form.name || 'Belum diisi'} />
                 <ReviewRow label="Telepon" value={form.phone || 'Belum diisi'} />
-                <ReviewRow label="Alamat" value={form.address || 'Belum diisi'} />
+                {form.notes && <ReviewRow label="Catatan" value={form.notes} />}
               </div>
 
             </>}
@@ -267,7 +289,7 @@ export default function BookingPage() {
           <aside className="summary-panel" aria-label="Ringkasan booking">
             <div className="summary-top"><span className="eyebrow">Ringkasan</span><span className="pending-pill">Pending</span></div>
                         <p className="summary-note">Pengajuan akan ditinjau staff sebelum dikonfirmasi.</p>
-            <div className="summary-service"><span className="summary-number">01</span><div><strong>{selectedService?.name ?? 'Belum memilih layanan'}</strong><small>{selectedService ? formatPrice(selectedService.price) : 'Harga mulai'}</small></div></div>
+            <div className="summary-service"><span className="summary-number">01</span><div><strong>{selectedServices.map(s => s.name).join(', ') || 'Belum memilih layanan'}</strong><small>{selectedServices.length ? `Total: ${formatPrice(selectedServices.reduce((sum, s) => sum + s.price, 0))}` : 'Harga mulai'}</small></div></div>
             <dl><div><dt>Tanggal</dt><dd>{form.date || 'Belum dipilih'}</dd></div><div><dt>Jam selesai</dt><dd>{form.endTime || 'Belum diusulkan'}</dd></div><div><dt>Lokasi</dt><dd>{form.address || 'Belum diisi'}</dd></div></dl>
 
           </aside>
@@ -280,7 +302,7 @@ export default function BookingPage() {
         </form>
       </section>
 
-      <footer className="site-footer"><span>[Nama MUA]</span><span>Area layanan: [Kota/area layanan]</span><span>Booking tanpa akun · Status awal pending</span></footer>
+      <footer className="site-footer"><span>Booking tanpa akun · Status awal pending</span></footer>
     </main>
   )
 }
