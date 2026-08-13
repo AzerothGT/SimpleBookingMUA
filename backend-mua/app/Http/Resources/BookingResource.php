@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Booking;
+use App\Models\BookingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,7 +15,6 @@ class BookingResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'service_id' => $this->service_id,
             'user_id' => $this->user_id,
             'client_name' => $this->client_name,
             'client_phone' => $this->client_phone,
@@ -31,7 +31,15 @@ class BookingResource extends JsonResource
             'notes' => $this->notes,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'service' => ServiceResource::make($this->whenLoaded('service')),
+            'services' => $this->whenLoaded('bookingServices', function () {
+                return $this->bookingServices->map(fn (BookingService $bs) => [
+                    'id' => $bs->service_id,
+                    'name' => $bs->service->name,
+                    'price' => (float) $bs->service->price,
+                    'qty' => $bs->qty,
+                    'subtotal' => (float) $bs->service->price * $bs->qty,
+                ]);
+            }),
             'staff' => UserResource::make($this->whenLoaded('user')),
             'tasks' => BookingTaskResource::collection($this->whenLoaded('bookingTasks')),
             'transactions' => TransactionResource::collection($this->whenLoaded('transactions')),

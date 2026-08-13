@@ -21,7 +21,7 @@ class CreateSnapTransaction
     public function handle(Booking $booking, User $actor): Transaction
     {
         return DB::transaction(function () use ($booking, $actor): Transaction {
-            $booking = Booking::query()->with('service')->lockForUpdate()->findOrFail($booking->id);
+            $booking = Booking::query()->with('bookingServices.service')->lockForUpdate()->findOrFail($booking->id);
 
             if (in_array($booking->status, ['cancelled', 'done'], true)) {
                 throw ValidationException::withMessages([
@@ -29,7 +29,7 @@ class CreateSnapTransaction
                 ]);
             }
 
-            $grossAmount = (int) round((float) $booking->service->price);
+            $grossAmount = (int) round($booking->bookingServices->sum(fn ($bs) => (float) $bs->service->price * $bs->qty));
             if ($grossAmount <= 0) {
                 throw ValidationException::withMessages([
                     'gross_amount' => 'The gross amount must be greater than zero.',

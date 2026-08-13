@@ -11,7 +11,7 @@ it('records public booking creation as a system activity', function () {
     $service = Service::factory()->create(['is_active' => true]);
 
     $response = $this->postJson('/api/bookings', [
-        'service_id' => $service->id,
+        'services' => [['id' => $service->id, 'qty' => 1]],
         'client_name' => 'Mei Lin',
         'client_phone' => '081234567890',
         'client_address' => 'Jl. Melati No. 10',
@@ -71,7 +71,7 @@ it('uses one consistent activity record per domain write', function () {
 
     $service = Service::factory()->create(['is_active' => true]);
     $this->postJson('/api/bookings', [
-        'service_id' => $service->id,
+        'services' => [['id' => $service->id, 'qty' => 1]],
         'client_name' => 'Mei Lin',
         'client_phone' => '081234567890',
         'client_address' => 'Jl. Melati No. 10',

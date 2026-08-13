@@ -14,6 +14,9 @@ class CreateBooking
     public function handle(array $data): Booking
     {
         return DB::transaction(function () use ($data): Booking {
+            $services = $data['services'];
+            unset($data['services']);
+
             $data['client_requested_ends_at'] = Carbon::createFromFormat(
                 'Y-m-d H:i',
                 $data['client_requested_date'].' '.$data['client_requested_end_time'],
@@ -23,6 +26,14 @@ class CreateBooking
             $data['status'] = 'pending';
 
             $booking = Booking::create($data);
+
+            foreach ($services as $service) {
+                $booking->bookingServices()->create([
+                    'service_id' => $service['id'],
+                    'qty' => $service['qty'],
+                ]);
+            }
+
             $this->recordActivity->handle(
                 null,
                 $booking,

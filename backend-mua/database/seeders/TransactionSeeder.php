@@ -16,11 +16,12 @@ class TransactionSeeder extends Seeder
         $admin = User::where('role', 'admin')->first();
 
         foreach ($bookings as $booking) {
+            $booking->load('bookingServices.service');
             Transaction::create([
                 'booking_id' => $booking->id,
                 'user_id' => $admin->id,
                 'order_id' => Str::random(40),
-                'gross_amount' => (int) $booking->service->price,
+                'gross_amount' => (int) round($booking->bookingServices->sum(fn ($bs) => (float) $bs->service->price * $bs->qty)),
                 'type' => 'dp',
                 'transaction_status' => 'settlement',
                 'fraud_status' => 'accept',

@@ -16,7 +16,7 @@ it('serializes concurrent schedule assignments for the same staff', function () 
     $staff = User::factory()->staff()->create();
     $bookings = Booking::factory()->unassigned()->count(2)->create();
     $bookingIds = $bookings->pluck('id')->all();
-    $serviceIds = $bookings->pluck('service_id')->all();
+    $serviceIds = DB::table('booking_service')->whereIn('booking_id', $bookingIds)->pluck('service_id')->all();
     $payload = [
         'user_id' => $staff->id,
         'starts_at' => '2026-08-10 12:00:00',

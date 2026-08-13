@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Warning } from '@phosphor-icons/react'
 import { createBooking, listServices } from '../../api/bookingApi'
 import BookingCalendar from '../../components/BookingCalendar'
@@ -13,7 +13,7 @@ const fallbackServices = [
 ]
 
 const emptyForm = {
-  serviceIds: [],
+  serviceItems: [],
   date: '',
   endTime: '',
   name: '',
@@ -64,11 +64,6 @@ export default function BookingPage() {
     }
   }, [])
 
-  const selectedServices = useMemo(
-    () => services.filter((s) => form.serviceIds.includes(String(s.id))),
-    [services, form.serviceIds],
-  )
-
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: '' }))
@@ -80,7 +75,7 @@ export default function BookingPage() {
 
   const validateStepOne = () => {
     const nextErrors = {}
-    if (!form.serviceIds.length) nextErrors.serviceIds = 'Pilih minimal satu layanan.'
+    if (!form.serviceItems.length) nextErrors.serviceItems = 'Pilih minimal satu layanan.'
     return nextErrors
   }
 
@@ -128,7 +123,7 @@ export default function BookingPage() {
     setSubmitState({ status: 'loading', message: 'Mengirim pengajuan booking...' })
     try {
       await createBooking({
-        service_id: form.serviceId,
+        services: form.serviceItems.map((item) => ({ id: item.id, qty: item.qty })),
         client_name: form.name,
         client_phone: form.phone,
         client_address: form.address,
@@ -199,34 +194,75 @@ export default function BookingPage() {
               <fieldset>
                 <div className="service-list">
                   {services.map((service) => {
-                    const selected = form.serviceIds.includes(String(service.id))
+                    const item = form.serviceItems.find((i) => i.id === String(service.id))
+                    const selected = !!item
                     return (
-                      <label className={`service-option ${selected ? 'selected' : ''}`} key={service.id}>
-                        <input type="checkbox" name="service" value={service.id} checked={selected} onChange={(e) => {
-                          const val = String(service.id)
-                          setForm((prev) => ({
-                            ...prev,
-                            serviceIds: e.target.checked ? [...prev.serviceIds, val] : prev.serviceIds.filter((id) => id !== val)
-                          }))
-                        }} />
+                      <div className={`service-option ${selected ? 'selected' : ''}`} key={service.id}>
+                        <input type="checkbox" name="service" value={service.id} checked={selected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setForm((prev) => ({
+                                ...prev,
+                                serviceItems: [...prev.serviceItems, { id: String(service.id), qty: 1 }],
+                              }))
+                            } else {
+                              setForm((prev) => ({
+                                ...prev,
+                                serviceItems: prev.serviceItems.filter((i) => i.id !== String(service.id)),
+                              }))
+                            }
+                          }}
+                        />
                         <span><strong>{service.name}</strong>{service.description ? <small>{service.description}</small> : null}</span>
                         <b>{formatPrice(service.price)}</b>
-                      </label>
+                        {selected && (
+                          <div className="qty-control">
+                            <button type="button" className="qty-btn" onClick={() => {
+                              setForm((prev) => {
+                                const updated = prev.serviceItems
+                                  .map((i) => i.id === String(service.id) ? { ...i, qty: i.qty - 1 } : i)
+                                  .filter((i) => i.qty > 0)
+                                return { ...prev, serviceItems: updated }
+                              })
+                            }}>−</button>
+                            <span className="qty-value">{item.qty}</span>
+                            <button type="button" className="qty-btn" onClick={() => {
+                              setForm((prev) => ({
+                                ...prev,
+                                serviceItems: prev.serviceItems.map((i) =>
+                                  i.id === String(service.id) ? { ...i, qty: i.qty + 1 } : i
+                                ),
+                              }))
+                            }}>+</button>
+                          </div>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
                 {servicesLoading && <p className="muted-text">Memuat katalog layanan...</p>}
                 {servicesError && <p className="field-error" role="alert">{servicesError}</p>}
-                {errors.serviceIds && <p className="field-error" role="alert">{errors.serviceIds}</p>}
-                {form.serviceIds.length > 0 && (
+                {errors.serviceItems && <p className="field-error" role="alert">{errors.serviceItems}</p>}
+                {form.serviceItems.length > 0 && (
                   <div className="cart-summary">
                     <strong>Layanan terpilih:</strong>
                     <ul>
-                      {selectedServices.map((s) => (
-                        <li key={s.id}>{s.name} — {formatPrice(s.price)}</li>
-                      ))}
+                      {form.serviceItems.map((item) => {
+                        const service = services.find((s) => String(s.id) === item.id)
+                        if (!service) return null
+                        return (
+                          <li key={item.id}>
+                            {service.name} × {item.qty} — {formatPrice(service.price * item.qty)}
+                          </li>
+                        )
+                      })}
                     </ul>
-                    <b>Total estimasi: {formatPrice(selectedServices.reduce((sum, s) => sum + s.price, 0))}</b>
+                    <b>Total estimasi: {formatPrice(
+                      form.serviceItems.reduce((sum, item) => {
+                        const service = services.find((s) => String(s.id) === item.id)
+                        return sum + (service ? service.price * item.qty : 0)
+                      }, 0)
+                    )}</b>
                   </div>
                 )}
               </fieldset>
@@ -234,7 +270,6 @@ export default function BookingPage() {
 
             {step === 2 && <>
 
-              <div className="selected-summary"><span>{selectedServices.map(s => s.name).join(', ') || 'Layanan terpilih'}</span><strong>Pilih tanggal di bawah</strong></div>
               <div className="step-two-layout">
                 <BookingCalendar
                   selectedDate={form.date}
@@ -244,7 +279,7 @@ export default function BookingPage() {
                 <div className="date-details">
                   <div>
                     <span className="step-kicker">Tanggal terpilih</span>
-                    <strong className="selected-date">{form.date || 'Belum dipilih'}</strong>
+                    <strong className="selected-date">{formatDayLabel(form.date)}</strong>
                     {errors.date && <small id="booking-date-error" className="field-error">{errors.date}</small>}
                   </div>
                   <CalendarAvailability selectedDate={form.date} availability={calendarAvailability} />
@@ -289,15 +324,25 @@ export default function BookingPage() {
           <aside className="summary-panel" aria-label="Ringkasan booking">
             <div className="summary-top"><span className="eyebrow">Ringkasan</span><span className="pending-pill">Pending</span></div>
                         <p className="summary-note">Pengajuan akan ditinjau staff sebelum dikonfirmasi.</p>
-            <div className="summary-service"><span className="summary-number">01</span><div><strong>{selectedServices.map(s => s.name).join(', ') || 'Belum memilih layanan'}</strong><small>{selectedServices.length ? `Total: ${formatPrice(selectedServices.reduce((sum, s) => sum + s.price, 0))}` : 'Harga mulai'}</small></div></div>
-            <dl><div><dt>Tanggal</dt><dd>{form.date || 'Belum dipilih'}</dd></div><div><dt>Jam selesai</dt><dd>{form.endTime || 'Belum diusulkan'}</dd></div><div><dt>Lokasi</dt><dd>{form.address || 'Belum diisi'}</dd></div></dl>
+            <div className="summary-service"><span className="summary-number">01</span><div><strong>{form.serviceItems.map(item => {
+              const s = services.find(sv => String(sv.id) === item.id)
+              return s ? `${s.name} × ${item.qty}` : ''
+            }).join(', ') || 'Belum memilih layanan'}</strong><small>{form.serviceItems.length
+              ? `Total: ${formatPrice(form.serviceItems.reduce((sum, item) => {
+                  const s = services.find(sv => String(sv.id) === item.id)
+                  return sum + (s ? s.price * item.qty : 0)
+                }, 0))}`
+              : 'Harga mulai'}</small></div></div>
+            <dl><div><dt>Tanggal</dt><dd>{formatDayLabel(form.date)}</dd></div><div><dt>Jam selesai</dt><dd>{form.endTime || 'Belum diusulkan'}</dd></div><div><dt>Lokasi</dt><dd>{form.address || 'Belum diisi'}</dd></div></dl>
 
           </aside>
 
           <div className="form-actions">
             {step > 1 && <button type="button" className="button button-secondary" onClick={() => setStep((current) => current - 1)}><ArrowLeft size={16} weight="bold" aria-hidden="true" /> Kembali</button>}
-            {step < 4 ? <button type="button" className="button button-primary" onClick={nextStep}>{step === 1 ? 'Lanjut pilih tanggal' : step === 2 ? 'Lanjut isi detail' : 'Tinjau pengajuan'} <ArrowRight size={16} weight="bold" aria-hidden="true" /></button> : <button type="submit" className="button button-primary" disabled={submitState.status === 'loading'}>{submitState.status === 'loading' ? 'Mengirim...' : 'Kirim pengajuan booking'} <ArrowUpRight size={16} weight="bold" aria-hidden="true" /></button>}
-            {submitState.status === 'error' && <p className="submit-error" role="alert">{submitState.message}</p>}
+            <div className="form-actions-main">
+              {step < 4 ? <button type="button" className="button button-primary" onClick={nextStep}>{step === 1 ? 'Lanjut pilih tanggal' : step === 2 ? 'Lanjut isi detail' : 'Tinjau pengajuan'} <ArrowRight size={16} weight="bold" aria-hidden="true" /></button> : <button type="submit" className="button button-primary" disabled={submitState.status === 'loading'}>{submitState.status === 'loading' ? 'Mengirim...' : 'Kirim pengajuan booking'} <ArrowUpRight size={16} weight="bold" aria-hidden="true" /></button>}
+              {submitState.status === 'error' && <p className="submit-error" role="alert">{submitState.message}</p>}
+            </div>
           </div>
         </form>
       </section>
@@ -313,6 +358,12 @@ function ReviewRow({ label, value }) {
 
 function formatBusyTime(value) {
   return new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
+}
+
+function formatDayLabel(value) {
+  if (!value) return 'Belum dipilih'
+  const date = new Date(value + 'T00:00:00')
+  return new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date)
 }
 
 function CalendarAvailability({ selectedDate, availability }) {

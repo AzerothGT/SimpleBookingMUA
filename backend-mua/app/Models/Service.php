@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -19,9 +20,10 @@ class Service extends Model
     use HasFactory;
     use HasUuids;
 
-    public function bookings(): HasMany
+    public function bookings(): BelongsToMany
     {
-        return $this->hasMany(Booking::class);
+        return $this->belongsToMany(Booking::class, 'booking_service', 'service_id', 'booking_id')
+            ->withPivot('qty');
     }
 
     public function serviceImages(): HasMany

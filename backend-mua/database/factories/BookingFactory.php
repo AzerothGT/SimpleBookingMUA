@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Booking;
-use App\Models\Service;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,7 +21,6 @@ class BookingFactory extends Factory
 
         return [
             'user_id' => User::factory(),
-            'service_id' => Service::factory(),
             'client_name' => fake()->name(),
             'client_phone' => fake()->phoneNumber(),
             'client_address' => fake()->address(),
@@ -37,6 +35,16 @@ class BookingFactory extends Factory
             'status' => 'pending',
             'notes' => fake()->optional()->sentence(),
         ];
+    }
+
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Booking $booking) {
+            $booking->bookingServices()->create([
+                'service_id' => \App\Models\Service::factory()->create()->id,
+                'qty' => 1,
+            ]);
+        });
     }
 
     public function confirmed(): static

@@ -10,6 +10,7 @@ Backend Laravel 13, MySQL, autentikasi opaque bearer token, dokumentasi OpenAPI 
 - **Penjadwalan oleh staff** — `starts_at` dan `ends_at` hanya bisa diisi `owner|admin|staff`, dengan proteksi overlap per staff yang aman terhadap race condition (row lock, diuji lewat proses paralel).
 - **State machine booking** — `pending → confirmed → done`, `cancelled` sebagai terminal. Transisi ilegal ditolak `422`.
 - **Katalog service + galeri** — banyak foto per service (upload atau URL eksternal), dijamin tepat satu cover per service di level database.
+- **Quantity per service** — setiap booking bisa pilih multiple service dengan qty (jumlah orang) masing-masing, disimpan di tabel pivot `booking_service`.
 - **Checklist kerja** — task per booking dengan urutan dan penanda selesai.
 - **Pembayaran Midtrans Snap** — create transaction, verifikasi signature SHA-512 webhook, pemrosesan idempotent, tidak bisa downgrade status yang sudah settlement.
 - **Audit trail** — setiap aksi penting tercatat di `activity_logs` beserta snapshot `before`/`after`.
@@ -48,6 +49,7 @@ app/
 │   ├── Requests/     Validasi & guard field per-role
 │   └── Resources/    Bentuk response JSON
 ├── Models/           Eloquent, UUID primary key
+│   ├── BookingService  Pivot booking ↔ service dengan qty
 ├── Policies/         Otorisasi berbasis role
 └── Services/         Adapter integrasi eksternal
 ```
@@ -152,7 +154,7 @@ Token dianggap valid bila belum expired dan user `is_active`. `POST /api/logout`
 | `GET` | `/api/services` | Daftar service aktif |
 | `GET` | `/api/services/{service}` | Detail service + foto |
 | `POST` | `/api/schedule/check` | Lihat jam sibuk di suatu tanggal |
-| `POST` | `/api/bookings` | Ajukan booking (`starts_at` selalu null) |
+| `POST` | `/api/bookings` | Ajukan booking (`services[{id, qty}]`, `starts_at` selalu null) |
 | `POST` | `/api/webhooks/midtrans` | Notifikasi Midtrans (signature-verified) |
 
 **Terproteksi** (`Authorization: Bearer`)
@@ -185,7 +187,7 @@ sequenceDiagram
 
     C->>A: POST /schedule/check (tanggal)
     A-->>C: rentang jam sibuk
-    C->>A: POST /bookings (tanggal, jam selesai, alamat, service)
+    C->>A: POST /bookings (tanggal, jam selesai, alamat, services[{id, qty}])
     A-->>C: booking pending, starts_at null
     S->>A: POST /bookings/{id}/assign-staff (starts_at, ends_at)
     A-->>S: overlap dicek, jadwal terset
@@ -201,6 +203,7 @@ sequenceDiagram
 
 ## Aturan bisnis yang dijaga
 
+- **Quantity per service** — booking kirim `services[{id, qty}]` bukan `service_id`. Gross amount Snap = `sum(qty × price)`.
 - `client_requested_date`, `client_requested_end_time`, `client_requested_ends_at` **immutable** setelah create — jejak usulan client.
 - `starts_at` hanya bisa diisi role internal. API publik menolak dengan `422`, bukan diam-diam membuang field.
 - Satu staff tidak bisa double-book. Cek overlap berjalan di dalam transaksi dengan row lock.
@@ -234,7 +237,7 @@ vendor/bin/pint --test
 
 ## Status
 
-118 test lulus, 605 assertion (7 skipped — MySQL-only schema tests).
+125 test lulus, 627 assertion (7 skipped — MySQL-only schema tests).
 
 Belum ada: frontend, refund flow, notifikasi WhatsApp/email, ownership scoping booking per staff (setiap user aktif saat ini bisa mengubah booking mana pun).
 
@@ -243,6 +246,7 @@ Belum ada: frontend, refund flow, notifikasi WhatsApp/email, ownership scoping b
 ```
 SimpleBookingMUA/
 ├── backend-mua/    Aplikasi Laravel
+├── frontend-mua/   Aplikasi React (user: booking, services, my-bookings; admin: starter)
 └── docs/           ERD, aturan bisnis, checklist compliance
 ```
 

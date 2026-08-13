@@ -6,7 +6,8 @@ erDiagram
     users ||--o{ bookings : handles
     users ||--o{ transactions : creates
     users ||--o{ activity_logs : performs
-    services ||--o{ bookings : booked_as
+    services ||--o{ booking_service : has
+    bookings ||--o{ booking_service : has
     services ||--o{ service_images : has
     bookings ||--o{ booking_tasks : has
     bookings ||--o{ transactions : has
@@ -58,7 +59,6 @@ erDiagram
     bookings {
         uuid id PK
         uuid user_id FK "staff handle, nullable saat request client"
-        uuid service_id FK
         varchar client_name
         varchar client_phone
         text client_address "alamat lokasi makeup"
@@ -74,6 +74,14 @@ erDiagram
         text notes
         timestamp created_at
         timestamp updated_at
+    }
+
+    booking_service {
+        uuid id PK
+        uuid booking_id FK
+        uuid service_id FK
+        int qty "jumlah orang"
+        timestamp created_at
     }
 
     booking_tasks {
@@ -124,7 +132,8 @@ erDiagram
 |---|---|---|---|
 | `users` | `personal_access_tokens` | 1—N | token login Sanctum |
 | `users` | `bookings` | 1—N | staff handle booking |
-| `services` | `bookings` | 1—N | jasa yang dipesan |
+| `services` | `booking_service` | 1—N | jasa yg dipesan (via pivot) |
+| `bookings` | `booking_service` | 1—N | layanan + qty per booking |
 | `services` | `service_images` | 1—N | foto jasa (upload atau link) |
 | `bookings` | `booking_tasks` | 1—N | checklist kerja per booking |
 | `bookings` | `transactions` | 1—N | bayar Snap per booking |
@@ -217,7 +226,7 @@ ORDER BY starts_at;
 
 ### Input create booking
 - `client_requested_date`, `client_requested_end_time`
-- `service_id`, `client_name`, `client_phone`
+- `services[{id, qty}]`, `client_name`, `client_phone`
 - `client_address` (wajib)
 - `maps_url`, `maps_lat`, `maps_lng` (opsional)
 
@@ -248,8 +257,9 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 |---|---|---|
 | `personal_access_tokens.tokenable_id` | `users` (morph) | CASCADE |
 | `bookings.user_id` | `users` | RESTRICT |
-| `bookings.service_id` | `services` | RESTRICT |
 | `service_images.service_id` | `services` | CASCADE |
+| `booking_service.booking_id` | `bookings` | CASCADE |
+| `booking_service.service_id` | `services` | RESTRICT |
 | `booking_tasks.booking_id` | `bookings` | CASCADE |
 | `transactions.booking_id` | `bookings` | RESTRICT |
 | `transactions.user_id` | `users` | RESTRICT |
@@ -260,6 +270,8 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 | Rule | Cara jaga |
 |---|---|
 | `order_id` unik | UNIQUE |
+| `qty > 0` per booking_service | app guard (`integer, min:1`) |
+| Pair unik `(booking_id, service_id)` di pivot | UNIQUE |
 | Satu staff tidak double-book | cek overlap saat staff set `starts_at`/`ends_at` |
 | `ends_at > starts_at` saat `starts_at` terisi | CHECK |
 | Usulan client (`date`/`end_time`/`ends_at`) immutable setelah create | app guard |
@@ -313,10 +325,11 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 - Skip JWT — opaque token Sanctum di DB cukup; ganti JWT kalau stateless scale butuh
 - `users.instagram_url` — opsional
 - `services`: name, price — **tanpa duration**; foto di `service_images` (1—N, upload atau link eksternal, satu `is_cover`)
+- `booking_service`: pivot booking ↔ service dengan `qty` (jumlah orang); pair `(booking_id, service_id)` unik
 - Durasi aktual = `ends_at - starts_at` setelah staff set
 - Client di `bookings`: tanggal, jam selesai usulan, alamat, maps
 - `starts_at` hanya owner/staff
-- Index: `(user_id, starts_at)` bookings; `order_id` transactions; `(entity_type, entity_id)` logs
+- Index: `(user_id, starts_at)` bookings; `(booking_id, service_id)` booking_service; `order_id` transactions; `(entity_type, entity_id)` logs
 
 ---
 
@@ -338,3 +351,4 @@ ERD di atas adalah spesifikasi target. Backend Laravel (`backend-mua/`) sengaja 
 | `transactions.type` `dp\|pelunasan\|refund` | Selalu `'dp'` saat create Snap | Belum ada endpoint pelunasan/refund; kolom sudah siap |
 | `activity_logs.user_id` untuk `transaction.webhook` | `null` | Actor adalah Midtrans, bukan user internal |
 | Cek jadwal | `POST /api/schedule/check` | Butuh body tervalidasi; secara semantik read-only |
+| `bookings.service_id` diganti pivot `booking_service` | `bookings` tidak lagi punya kolom `service_id`; relasi M:N via `booking_service` dengan `qty` | Multi-service + quantity per booking |

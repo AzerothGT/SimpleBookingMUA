@@ -34,7 +34,11 @@ it('resolves activity log aliases through the morph map', function () {
 
 it('uses polymorphic service activity logs and keeps booking context logs separate', function () {
     $service = Service::factory()->create();
-    $booking = Booking::factory()->for($service)->create();
+    $booking = Booking::factory()->create();
+    $booking->bookingServices()->create([
+        'service_id' => $service->id,
+        'qty' => 1,
+    ]);
 
     ActivityLog::factory()->create([
         'entity_type' => 'service',

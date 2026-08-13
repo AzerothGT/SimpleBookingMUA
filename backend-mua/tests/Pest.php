@@ -77,6 +77,5 @@ function tokenForRole(string $role): string
 function validBooking(array $attributes = []): Booking
 {
     return Booking::factory()
-        ->for(Service::factory()->state(['is_active' => true]))
         ->create($attributes);
 }

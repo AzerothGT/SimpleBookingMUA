@@ -44,7 +44,7 @@ class BookingController extends Controller
         Gate::authorize('viewAny', Booking::class);
 
         $bookings = Booking::query()
-            ->with(['user', 'service', 'transactions'])
+            ->with(['user', 'bookingServices.service', 'transactions'])
             ->when($request->status, fn ($q, $status) => $q->where('status', $status))
             ->when($request->client_name, fn ($q, $name) => $q->where('client_name', 'like', "%{$name}%"))
             ->when($request->client_phone, fn ($q, $phone) => $q->where('client_phone', $phone))
@@ -61,9 +61,18 @@ class BookingController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['service_id', 'client_name', 'client_phone', 'client_address', 'client_requested_date', 'client_requested_end_time'],
+                required: ['services', 'client_name', 'client_phone', 'client_address', 'client_requested_date', 'client_requested_end_time'],
                 properties: [
-                    new OA\Property(property: 'service_id', type: 'string', format: 'uuid'),
+                    new OA\Property(
+                        property: 'services',
+                        type: 'array',
+                        items: new OA\Items(
+                            properties: [
+                                new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                                new OA\Property(property: 'qty', type: 'integer', minimum: 1),
+                            ],
+                        ),
+                    ),
                     new OA\Property(property: 'client_name', type: 'string'),
                     new OA\Property(property: 'client_phone', type: 'string'),
                     new OA\Property(property: 'client_address', type: 'string'),
@@ -87,7 +96,7 @@ class BookingController extends Controller
     ): JsonResponse {
         $booking = $createBooking->handle($request->validated());
 
-        return BookingResource::make($booking->load('service'))
+        return BookingResource::make($booking->load('bookingServices.service'))
             ->response()
             ->setStatusCode(201);
     }
@@ -111,7 +120,7 @@ class BookingController extends Controller
 
         return BookingResource::make($booking->load([
             'user',
-            'service',
+            'bookingServices.service',
             'bookingTasks',
             'transactions',
             'activityLogs.user',
@@ -159,7 +168,7 @@ class BookingController extends Controller
             $request->validated(),
         );
 
-        return BookingResource::make($booking->load('service'));
+        return BookingResource::make($booking->load('bookingServices.service'));
     }
 
     public function changeStatus(
@@ -241,7 +250,7 @@ class BookingController extends Controller
             $request->validated(),
         );
 
-        return BookingResource::make($booking->load(['user', 'service']));
+        return BookingResource::make($booking->load(['user', 'bookingServices.service']));
     }
 
     #[OA\Get(

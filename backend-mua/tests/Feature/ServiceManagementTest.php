@@ -9,7 +9,11 @@ uses(RefreshDatabase::class);
 
 it('rejects deactivation while active bookings exist', function (string $status) {
     $service = Service::factory()->create(['is_active' => true]);
-    Booking::factory()->for($service)->create(['status' => $status]);
+    $booking = Booking::factory()->create(['status' => $status]);
+    $booking->bookingServices()->create([
+        'service_id' => $service->id,
+        'qty' => 1,
+    ]);
 
     $this->withToken(tokenForRole('admin'))
         ->patchJson('/api/services/'.$service->id, ['is_active' => false])
@@ -21,7 +25,11 @@ it('rejects deactivation while active bookings exist', function (string $status)
 
 it('treats zero as a deactivation request', function () {
     $service = Service::factory()->create(['is_active' => true]);
-    Booking::factory()->for($service)->create(['status' => 'pending']);
+    $booking = Booking::factory()->create(['status' => 'pending']);
+    $booking->bookingServices()->create([
+        'service_id' => $service->id,
+        'qty' => 1,
+    ]);
 
     $this->withToken(tokenForRole('admin'))
         ->patchJson('/api/services/'.$service->id, ['is_active' => 0])
@@ -31,7 +39,11 @@ it('treats zero as a deactivation request', function () {
 
 it('allows deactivation when only inactive bookings exist', function (string $status) {
     $service = Service::factory()->create(['is_active' => true]);
-    Booking::factory()->for($service)->create(['status' => $status]);
+    $booking = Booking::factory()->create(['status' => $status]);
+    $booking->bookingServices()->create([
+        'service_id' => $service->id,
+        'qty' => 1,
+    ]);
 
     $this->withToken(tokenForRole('admin'))
         ->patchJson('/api/services/'.$service->id, ['is_active' => false])

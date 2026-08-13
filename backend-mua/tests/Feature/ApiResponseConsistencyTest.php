@@ -14,7 +14,7 @@ it('returns a consistent validation error envelope', function () {
     $response = $this->postJson('/api/bookings', [])->assertUnprocessable();
 
     expect(array_keys($response->json()))->toEqualCanonicalizing(['message', 'errors'])
-        ->and($response->json('errors.service_id'))->toBeArray();
+        ->and($response->json('errors.services'))->toBeArray();
 });
 
 it('returns a message-only envelope for auth and lookup failures', function (string $method, string $uri, ?string $token, int $status) {
@@ -60,7 +60,7 @@ it('hides internal relations from the public booking response', function () {
     $service = Service::factory()->create(['is_active' => true]);
 
     $payload = $this->postJson('/api/bookings', [
-        'service_id' => $service->id,
+        'services' => [['id' => $service->id, 'qty' => 1]],
         'client_name' => 'Rina',
         'client_phone' => '081234567890',
         'client_address' => 'Jl. Melati No. 10',
@@ -68,8 +68,8 @@ it('hides internal relations from the public booking response', function () {
         'client_requested_end_time' => '15:00',
     ])->assertCreated()->json();
 
-    expect($payload)->toHaveKeys(['id', 'status', 'service'])
-        ->and($payload)->not->toHaveKeys(['staff', 'transactions', 'tasks', 'activity_logs']);
+    expect($payload)->toHaveKeys(['id', 'status', 'services'])
+        ->and($payload)->not->toHaveKeys(['staff', 'transactions', 'tasks', 'activity_logs', 'service']);
 });
 
 it('keeps activity log payloads free of raw morph columns', function () {

@@ -13,10 +13,9 @@ class StoreBookingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'service_id' => [
-                'required',
-                Rule::exists('services', 'id')->where('is_active', true),
-            ],
+            'services' => ['required', 'array', 'min:1'],
+            'services.*.id' => ['required', Rule::exists('services', 'id')->where('is_active', true)],
+            'services.*.qty' => ['required', 'integer', 'min:1'],
             'client_name' => ['required', 'string', 'max:255'],
             'client_phone' => ['required', 'string', 'max:20'],
             'client_address' => ['required', 'string'],

@@ -69,7 +69,8 @@ it('defines required foreign keys and indexes', function () {
         ->and($deleteRules)->toMatchArray([
             'service_images.service_id' => 'CASCADE',
             'bookings.user_id' => 'RESTRICT',
-            'bookings.service_id' => 'RESTRICT',
+            'booking_service.booking_id' => 'CASCADE',
+            'booking_service.service_id' => 'RESTRICT',
             'booking_tasks.booking_id' => 'CASCADE',
             'transactions.booking_id' => 'RESTRICT',
             'transactions.user_id' => 'RESTRICT',

@@ -29,9 +29,18 @@ function normalizeCalendar(payload) {
   return new Map(entries.map((entry) => [entry.date, Array.isArray(entry.busy_ranges) ? entry.busy_ranges : []]))
 }
 
+function suggestInitialMonth() {
+  const today = new Date()
+  // Kalau sudah lewat tanggal 25, buka bulan depan
+  if (today.getDate() > 25) {
+    return new Date(today.getFullYear(), today.getMonth() + 1, 1)
+  }
+  return today
+}
+
 export default function BookingCalendar({ selectedDate, onSelectedDateChange, onAvailabilityChange }) {
   const selected = useMemo(() => parseDate(selectedDate), [selectedDate])
-  const [month, setMonth] = useState(() => selected ?? new Date())
+  const [month, setMonth] = useState(() => selected ?? suggestInitialMonth())
   const [busyByDate, setBusyByDate] = useState(() => new Map())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -71,6 +80,12 @@ export default function BookingCalendar({ selectedDate, onSelectedDateChange, on
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
+  const dotClass = error
+    ? 'legend-dot legend-dot--error'
+    : loading
+      ? 'legend-dot legend-dot--loading'
+      : 'legend-dot'
+
   return (
     <div className="booking-calendar" aria-label="Pilih tanggal makeup">
       <DayPicker
@@ -85,7 +100,11 @@ export default function BookingCalendar({ selectedDate, onSelectedDateChange, on
         fixedWeeks
         showOutsideDays
       />
-      <div className="calendar-legend"><span aria-hidden="true" /> Jadwal final tercatat</div>
+      <div className="calendar-legend" aria-label="Keterangan kalender: titik oranye = tanggal dengan jadwal tercatat, tetap bisa dipilih">
+        <span className={dotClass} aria-hidden="true" />
+        <span>Jadwal tercatat</span>
+        {!loading && <span className="legend-note">tetap bisa dipilih</span>}
+      </div>
     </div>
   )
 }

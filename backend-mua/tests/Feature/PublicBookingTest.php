@@ -16,7 +16,7 @@ beforeEach(function () {
 function publicBookingPayload(Service $service, array $overrides = []): array
 {
     return array_merge([
-        'service_id' => $service->id,
+        'services' => [['id' => $service->id, 'qty' => 1]],
         'client_name' => 'Mei Lin',
         'client_phone' => '081234567890',
         'client_address' => 'Jl. Melati No. 10',
@@ -44,7 +44,7 @@ it('rejects inactive services and requested end times in the past', function () 
 
     $this->postJson('/api/bookings', publicBookingPayload($inactive))
         ->assertUnprocessable()
-        ->assertJsonValidationErrors('service_id');
+        ->assertJsonValidationErrors('services.0.id');
 
     $this->postJson('/api/bookings', publicBookingPayload($active, [
         'client_requested_date' => '2026-08-06',

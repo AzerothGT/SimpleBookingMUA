@@ -19,10 +19,11 @@ it('creates an active user with a valid sanctum token helper', function () {
 
 it('creates a valid future booking helper', function () {
     $booking = validBooking();
+    $booking->load('bookingServices.service');
 
     expect($booking)
         ->toBeInstanceOf(Booking::class)
-        ->and($booking->service->is_active)->toBeTrue()
+        ->and($booking->bookingServices->first()->service->is_active)->toBeTrue()
         ->and($booking->client_requested_ends_at->isFuture())->toBeTrue()
         ->and($booking->starts_at)->toBeNull()
         ->and($booking->ends_at->equalTo($booking->client_requested_ends_at))->toBeTrue()

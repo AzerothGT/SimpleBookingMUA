@@ -10,11 +10,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+
+
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 #[Fillable([
     'user_id',
-    'service_id',
     'client_name',
     'client_phone',
     'client_address',
@@ -39,9 +40,9 @@ class Booking extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function service(): BelongsTo
+    public function bookingServices(): HasMany
     {
-        return $this->belongsTo(Service::class);
+        return $this->hasMany(BookingService::class);
     }
 
     public function bookingTasks(): HasMany
