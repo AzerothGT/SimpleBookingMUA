@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Warning } from '@phosphor-icons/react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, CaretDown, Check, Warning } from '@phosphor-icons/react'
 import { createBooking, listServices } from '../../api/bookingApi'
 import AnalogTimePicker from '../../components/AnalogTimePicker'
 import BookingCalendar from '../../components/BookingCalendar'
 import Navbar from '../../components/Navbar'
+import { useToast } from '../../context/ToastContext'
 
 const fallbackServices = [
   { id: 'fallback-natural', name: 'Makeup Natural', price: 500000, description: 'Fresh, ringan, dan effortless.' },
@@ -43,6 +44,34 @@ export default function BookingPage() {
   const [submitState, setSubmitState] = useState({ status: 'idle', message: '' })
   const [servicesLoading, setServicesLoading] = useState(true)
   const [servicesError, setServicesError] = useState('')
+  const [showOptional, setShowOptional] = useState(false)
+  const { toast } = useToast()
+  const errorTickRef = useRef(0)
+
+  const highlightErrors = (errorKeys) => {
+    if (!errorKeys.length) return
+    errorTickRef.current += 1
+    const tick = errorTickRef.current
+    const firstField = document.getElementById(`field-${errorKeys[0]}`)
+    if (firstField) firstField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    errorKeys.forEach((key) => {
+      const el = document.getElementById(`field-${key}`)
+      if (el) {
+        el.classList.remove('field-highlight')
+        // restart animation
+        void el.offsetWidth
+        el.classList.add('field-highlight')
+      }
+    })
+    const timeout = setTimeout(() => {
+      errorKeys.forEach((key) => {
+        if (errorTickRef.current !== tick) return
+        const el = document.getElementById(`field-${key}`)
+        if (el) el.classList.remove('field-highlight')
+      })
+    }, 2000)
+    return () => clearTimeout(timeout)
+  }
 
   useEffect(() => {
     let active = true
@@ -50,14 +79,17 @@ export default function BookingPage() {
       .then((payload) => {
         if (!active) return
         const apiServices = unwrapData(payload).map((service) => ({
-          id: service.id,
+          id: String(service.id),
           name: service.name,
           price: Number(service.price ?? 0),
           description: service.description ?? 'Layanan makeup sesuai kebutuhanmu.',
         }))
         if (apiServices.length) setServices(apiServices)
       })
-      .catch(() => setServicesError('Katalog layanan belum terhubung.'))
+      .catch(() => {
+        setServicesError('Katalog layanan belum terhubung.')
+        toast({ type: 'error', title: 'Katalog layanan gagal dimuat', message: 'Menampilkan daftar layanan bawaan. Kamu tetap bisa melanjutkan booking.' })
+      })
       .finally(() => active && setServicesLoading(false))
 
     return () => {
@@ -73,6 +105,24 @@ export default function BookingPage() {
   const handleAvailabilityChange = useCallback((availability) => {
     setCalendarAvailability(availability)
   }, [])
+
+  const toggleService = (serviceId, checked) => {
+    setForm((prev) => ({
+      ...prev,
+      serviceItems: checked
+        ? [...prev.serviceItems, { id: serviceId, qty: 1 }]
+        : prev.serviceItems.filter((i) => i.id !== serviceId),
+    }))
+  }
+
+  const updateQty = (serviceId, delta) => {
+    setForm((prev) => ({
+      ...prev,
+      serviceItems: prev.serviceItems
+        .map((i) => (i.id === serviceId ? { ...i, qty: i.qty + delta } : i))
+        .filter((i) => i.qty > 0),
+    }))
+  }
 
   const validateStepOne = () => {
     const nextErrors = {}
@@ -99,12 +149,19 @@ export default function BookingPage() {
 
   const validateStepFour = () => ({})
 
+  const validators = [validateStepOne, validateStepTwo, validateStepThree]
 
   const nextStep = () => {
-    const validators = [validateStepOne, validateStepTwo, validateStepThree, validateStepFour]
-    const nextErrors = validators[step - 1]()
+    const nextErrors = validators[step - 1]?.() ?? {}
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors)
+      const messages = Object.values(nextErrors)
+      toast({
+        type: 'error',
+        title: `Lengkapi data di tahap 0${step}`,
+        message: messages.join(' · '),
+      })
+      highlightErrors(Object.keys(nextErrors))
       return
     }
     setErrors({})
@@ -118,6 +175,12 @@ export default function BookingPage() {
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors)
       setStep(3)
+      toast({
+        type: 'error',
+        title: 'Lengkapi data sebelum mengirim',
+        message: Object.values(nextErrors).join(' · '),
+      })
+      highlightErrors(Object.keys(nextErrors))
       return
     }
 
@@ -137,11 +200,16 @@ export default function BookingPage() {
       window.dispatchEvent(new CustomEvent('booking_submit_success'))
     } catch (error) {
       const validationErrors = error.payload?.errors ?? {}
-      const fieldMap = { client_name: 'name', client_phone: 'phone', client_address: 'address', client_requested_end_time: 'endTime' }
+      const fieldMap = { client_name: 'name', client_phone: 'phone', client_address: 'address', client_requested_end_time: 'endTime', client_requested_date: 'date' }
+      const stepForField = { name: 3, phone: 3, address: 3, mapsUrl: 3, notes: 3, endTime: 2, date: 2, serviceItems: 1 }
       if (Object.keys(validationErrors).length) {
-        setErrors(Object.fromEntries(Object.entries(validationErrors).map(([key, value]) => [fieldMap[key] ?? key, Array.isArray(value) ? value[0] : value])))
+        const mapped = Object.fromEntries(Object.entries(validationErrors).map(([key, value]) => [fieldMap[key] ?? key, Array.isArray(value) ? value[0] : value]))
+        setErrors(mapped)
+        setStep(stepForField[Object.keys(mapped)[0]] ?? 4)
+        setTimeout(() => highlightErrors(Object.keys(mapped)), 0)
       }
       setSubmitState({ status: 'error', message: error.message })
+      toast({ type: 'error', title: 'Pengajuan gagal dikirim', message: error.message })
       window.dispatchEvent(new CustomEvent('booking_submit_error'))
     }
   }
@@ -181,7 +249,7 @@ export default function BookingPage() {
       <Navbar />
       <section className="booking-shell" id="booking" aria-labelledby="booking-title">
         <div className="section-heading">
-          <div><h2 id="booking-title">Ajukan Booking</h2></div>
+          <div><h2 id="booking-title">Booking</h2></div>
           <span className="step-counter">0{step} / 04</span>
         </div>
         <div className="progress" aria-label={`Tahap ${step} dari 4`}>
@@ -192,52 +260,42 @@ export default function BookingPage() {
           <div className="form-panel">
             {step === 1 && <>
 
-              <fieldset>
+              <fieldset id="field-serviceItems">
                 <div className="service-list">
                   {services.map((service) => {
-                    const item = form.serviceItems.find((i) => i.id === String(service.id))
+                    const item = form.serviceItems.find((i) => i.id === service.id)
                     const selected = !!item
+                    const inputId = `service-${service.id}`
                     return (
-                      <div className={`service-option ${selected ? 'selected' : ''}`} key={service.id}>
-                        <input type="checkbox" name="service" value={service.id} checked={selected}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setForm((prev) => ({
-                                ...prev,
-                                serviceItems: [...prev.serviceItems, { id: String(service.id), qty: 1 }],
-                              }))
-                            } else {
-                              setForm((prev) => ({
-                                ...prev,
-                                serviceItems: prev.serviceItems.filter((i) => i.id !== String(service.id)),
-                              }))
-                            }
-                          }}
+                      <label
+                        className={`service-option ${selected ? 'selected' : ''}`}
+                        key={service.id}
+                        htmlFor={inputId}
+                      >
+                        <input
+                          type="checkbox"
+                          id={inputId}
+                          name="service"
+                          value={service.id}
+                          checked={selected}
+                          onChange={(e) => toggleService(service.id, e.target.checked)}
+                          className="service-checkbox"
                         />
+                        <div className={`service-check ${selected ? 'checked' : ''}`} aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </div>
                         <span><strong>{service.name}</strong>{service.description ? <small>{service.description}</small> : null}</span>
                         <b>{formatPrice(service.price)}</b>
                         {selected && (
                           <div className="qty-control">
-                            <button type="button" className="qty-btn" onClick={() => {
-                              setForm((prev) => {
-                                const updated = prev.serviceItems
-                                  .map((i) => i.id === String(service.id) ? { ...i, qty: i.qty - 1 } : i)
-                                  .filter((i) => i.qty > 0)
-                                return { ...prev, serviceItems: updated }
-                              })
-                            }}>−</button>
+                            <button type="button" className="qty-btn" onClick={() => updateQty(service.id, -1)}>−</button>
                             <span className="qty-value">{item.qty}</span>
-                            <button type="button" className="qty-btn" onClick={() => {
-                              setForm((prev) => ({
-                                ...prev,
-                                serviceItems: prev.serviceItems.map((i) =>
-                                  i.id === String(service.id) ? { ...i, qty: i.qty + 1 } : i
-                                ),
-                              }))
-                            }}>+</button>
+                            <button type="button" className="qty-btn" onClick={() => updateQty(service.id, 1)}>+</button>
                           </div>
                         )}
-                      </div>
+                      </label>
                     )
                   })}
                 </div>
@@ -249,7 +307,7 @@ export default function BookingPage() {
                     <strong>Layanan terpilih:</strong>
                     <ul>
                       {form.serviceItems.map((item) => {
-                        const service = services.find((s) => String(s.id) === item.id)
+                        const service = services.find((s) => s.id === item.id)
                         if (!service) return null
                         return (
                           <li key={item.id}>
@@ -260,7 +318,7 @@ export default function BookingPage() {
                     </ul>
                     <b>Total estimasi: {formatPrice(
                       form.serviceItems.reduce((sum, item) => {
-                        const service = services.find((s) => String(s.id) === item.id)
+                        const service = services.find((s) => s.id === item.id)
                         return sum + (service ? service.price * item.qty : 0)
                       }, 0)
                     )}</b>
@@ -272,15 +330,21 @@ export default function BookingPage() {
             {step === 2 && <>
 
               <div className="step-two-layout">
-                <BookingCalendar
-                  selectedDate={form.date}
-                  onSelectedDateChange={(date) => updateField('date', date)}
-                  onAvailabilityChange={handleAvailabilityChange}
-                />
+                <div id="field-date">
+                  <BookingCalendar
+                    selectedDate={form.date}
+                    onSelectedDateChange={(date) => updateField('date', date)}
+                    onAvailabilityChange={handleAvailabilityChange}
+                  />
+                  {errors.date && <small className="field-error" role="alert">{errors.date}</small>}
+                </div>
                 <div className="date-details">
                   <CalendarAvailability selectedDate={form.date} availability={calendarAvailability} />
                   <fieldset className="detail-group">
-                    <div className="field"><AnalogTimePicker value={form.endTime} onChange={(v) => updateField('endTime', v)} />{errors.endTime && <small id="end-time-error" className="field-error" role="alert">{errors.endTime}</small>}</div>
+                    <div className="field" id="field-endTime">
+                      <AnalogTimePicker value={form.endTime} onChange={(v) => updateField('endTime', v)} />
+                      {errors.endTime && <small id="end-time-error" className="field-error" role="alert">{errors.endTime}</small>}
+                    </div>
                   </fieldset>
                 </div>
               </div>
@@ -290,28 +354,39 @@ export default function BookingPage() {
             {step === 3 && <>
 
               <fieldset className="detail-group">
-                <legend>Kontak</legend>
-                <div className="field-row"><label className="field"><span>Nama lengkap</span><input id="client-name" value={form.name} onChange={(event) => updateField('name', event.target.value)} autoComplete="name" aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'client-name-error' : undefined} />{errors.name && <small id="client-name-error" className="field-error">{errors.name}</small>}</label><label className="field"><span>Nomor telepon</span><input id="client-phone" type="tel" value={form.phone} onChange={(event) => updateField('phone', event.target.value)} autoComplete="tel" aria-invalid={Boolean(errors.phone)} aria-describedby={errors.phone ? 'client-phone-error' : undefined} />{errors.phone && <small id="client-phone-error" className="field-error">{errors.phone}</small>}</label></div>
-              </fieldset>
-              <fieldset className="detail-group">
-                <legend>Lokasi</legend>
-                <label className="field"><span>Alamat makeup</span><textarea id="client-address" rows="2" value={form.address} onChange={(event) => updateField('address', event.target.value)} autoComplete="street-address" aria-invalid={Boolean(errors.address)} aria-describedby={errors.address ? 'client-address-error' : undefined} />{errors.address && <small id="client-address-error" className="field-error">{errors.address}</small>}</label>
-                <label className="field"><span>Link Google Maps <em>opsional</em></span><input id="maps-url" type="url" placeholder="https://maps.google.com/..." value={form.mapsUrl} onChange={(event) => updateField('mapsUrl', event.target.value)} aria-invalid={Boolean(errors.mapsUrl)} aria-describedby={errors.mapsUrl ? 'maps-url-error' : undefined} />{errors.mapsUrl && <small id="maps-url-error" className="field-error">{errors.mapsUrl}</small>}</label>
-              </fieldset>
-              <fieldset className="detail-group">
-                <legend>Catatan tambahan <em>opsional</em></legend>
-                <label className="field"><span>Kebutuhan khusus</span><textarea rows="2" placeholder="Alergi, kulit sensitif, trial, atau booking grup" value={form.notes} onChange={(event) => updateField('notes', event.target.value)} /></label>
+                <legend>Detail kamu</legend>
+                <div className="field-row">
+                  <label className="field" id="field-name"><span>Nama lengkap</span><input id="client-name" value={form.name} onChange={(event) => updateField('name', event.target.value)} autoComplete="name" aria-invalid={Boolean(errors.name)} aria-describedby={errors.name ? 'client-name-error' : undefined} />{errors.name && <small id="client-name-error" className="field-error" role="alert">{errors.name}</small>}</label>
+                  <label className="field" id="field-phone"><span>Nomor telepon</span><input id="client-phone" type="tel" value={form.phone} onChange={(event) => updateField('phone', event.target.value)} autoComplete="tel" aria-invalid={Boolean(errors.phone)} aria-describedby={errors.phone ? 'client-phone-error' : undefined} />{errors.phone && <small id="client-phone-error" className="field-error" role="alert">{errors.phone}</small>}</label>
+                </div>
+                <label className="field" id="field-address"><span>Alamat makeup</span><textarea id="client-address" rows={1} value={form.address} onChange={(event) => updateField('address', event.target.value)} autoComplete="street-address" aria-invalid={Boolean(errors.address)} aria-describedby={errors.address ? 'client-address-error' : undefined} />{errors.address && <small id="client-address-error" className="field-error" role="alert">{errors.address}</small>}</label>
+                <button
+                  type="button"
+                  className={`optional-toggle ${showOptional ? 'open' : ''}`}
+                  onClick={() => setShowOptional((value) => !value)}
+                  aria-expanded={showOptional}
+                  aria-controls="optional-details"
+                >
+                  <span>{showOptional ? 'Sembunyikan' : 'Tambah'} detail opsional</span>
+                  <CaretDown className="optional-toggle-icon" size={14} weight="bold" aria-hidden="true" />
+                </button>
+                {showOptional || errors.mapsUrl || errors.notes ? (
+                  <div className="optional-fields" id="optional-details">
+                    <label className="field" id="field-mapsUrl"><span>Link Google Maps <em>opsional</em></span><input id="maps-url" type="url" placeholder="https://maps.google.com/..." value={form.mapsUrl} onChange={(event) => updateField('mapsUrl', event.target.value)} aria-invalid={Boolean(errors.mapsUrl)} aria-describedby={errors.mapsUrl ? 'maps-url-error' : undefined} />{errors.mapsUrl && <small id="maps-url-error" className="field-error" role="alert">{errors.mapsUrl}</small>}</label>
+                    <label className="field"><span>Catatan khusus <em>opsional</em></span><textarea rows={2} placeholder="Alergi, kulit sensitif, trial, atau booking grup" value={form.notes} onChange={(event) => updateField('notes', event.target.value)} /></label>
+                  </div>
+                ) : null}
               </fieldset>
             </>}
 
             {step === 4 && <>
 
-              <p className="review-intro muted-text">Rincian layanan, tanggal, dan lokasi sudah terlihat di panel Ringkasan — cek kembali data kontakmu di bawah.</p>
               <div className="review-list">
                 <ReviewRow label="Nama" value={form.name || 'Belum diisi'} />
                 <ReviewRow label="Telepon" value={form.phone || 'Belum diisi'} />
                 {form.notes && <ReviewRow label="Catatan" value={form.notes} />}
               </div>
+              <p className="review-trust">Pengajuan masuk sebagai <strong>pending</strong>. Staff meninjau tanggal, lokasi, dan layanan sebelum jam mulai dikonfirmasi — bukan pembayaran instan.</p>
 
             </>}
           </div>
@@ -320,11 +395,11 @@ export default function BookingPage() {
             <div className="summary-top"><span className="eyebrow">Ringkasan</span><span className="pending-pill">Pending</span></div>
                         <p className="summary-note">Pengajuan akan ditinjau staff sebelum dikonfirmasi.</p>
             <div className="summary-service"><span className="summary-number">01</span><div><strong>{form.serviceItems.map(item => {
-              const s = services.find(sv => String(sv.id) === item.id)
+              const s = services.find(sv => sv.id === item.id)
               return s ? `${s.name} × ${item.qty}` : ''
             }).join(', ') || 'Belum memilih layanan'}</strong><small>{form.serviceItems.length
               ? `Total: ${formatPrice(form.serviceItems.reduce((sum, item) => {
-                  const s = services.find(sv => String(sv.id) === item.id)
+                  const s = services.find(sv => sv.id === item.id)
                   return sum + (s ? s.price * item.qty : 0)
                 }, 0))}`
               : 'Harga mulai'}</small></div></div>
@@ -336,7 +411,6 @@ export default function BookingPage() {
             {step > 1 && <button type="button" className="button button-secondary" onClick={() => setStep((current) => current - 1)}><ArrowLeft size={16} weight="bold" aria-hidden="true" /> Kembali</button>}
             <div className="form-actions-main">
               {step < 4 ? <button type="button" className="button button-primary" onClick={nextStep}>{step === 1 ? 'Lanjut pilih tanggal' : step === 2 ? 'Lanjut isi detail' : 'Tinjau pengajuan'} <ArrowRight size={16} weight="bold" aria-hidden="true" /></button> : <button type="submit" className="button button-primary" disabled={submitState.status === 'loading'}>{submitState.status === 'loading' ? 'Mengirim...' : 'Kirim pengajuan booking'} <ArrowUpRight size={16} weight="bold" aria-hidden="true" /></button>}
-              {submitState.status === 'error' && <p className="submit-error" role="alert">{submitState.message}</p>}
             </div>
           </div>
         </form>

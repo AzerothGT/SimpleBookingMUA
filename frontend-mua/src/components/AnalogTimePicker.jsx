@@ -35,8 +35,8 @@ export default function AnalogTimePicker({ value, onChange }) {
 
   const handAngle =
     mode === 'hour'
-      ? ((hours24 % 12) + minutes / 60) / 12 * 360
-      : minutes / 60 * 360
+      ? (displayHour % 12) * 30
+      : (minutes / 60) * 360
 
   return (
     <div className="analog-time-picker">
@@ -73,9 +73,6 @@ export default function AnalogTimePicker({ value, onChange }) {
           <div className="atp-pin" />
         </div>
       </div>
-      <p className="atp-hint">
-        {mode === 'hour' ? 'Ketuk angka untuk memilih jam' : 'Ketuk angka untuk memilih menit'}
-      </p>
     </div>
   )
 }

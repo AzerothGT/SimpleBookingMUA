@@ -97,12 +97,12 @@ export default function BookingCalendar({ selectedDate, onSelectedDateChange, on
             onSelect={(date) => date && onSelectedDateChange(formatDate(date))}
             disabled={[
               { before: today },
-              (date) => {
+            ]}
+            modifiers={{
+              busy: (date) => {
                 if (loading || error) return false
                 return busyByDate.has(formatDate(date))
               },
-            ]}
-            modifiers={{
               free: (date) => {
                 if (loading || error) return false
                 if (date.getMonth() !== month.getMonth()) return false
@@ -113,7 +113,7 @@ export default function BookingCalendar({ selectedDate, onSelectedDateChange, on
             fixedWeeks
             showOutsideDays
           />
-          <div className="calendar-legend" aria-label="Keterangan kalender: hijau = tanggal tersedia, abu = tanggal penuh">
+          <div className="calendar-legend" aria-label="Keterangan kalender: hijau = tanggal tersedia, oranye = ada jadwal tercatat">
             {error ? (
               <>
                 <span className="legend-dot legend-dot--error" aria-hidden="true" />
@@ -123,8 +123,8 @@ export default function BookingCalendar({ selectedDate, onSelectedDateChange, on
               <>
                 <span className="legend-dot legend-dot--free" aria-hidden="true" />
                 <span>Tersedia</span>
-                <span className="legend-dot legend-dot--full" aria-hidden="true" />
-                <span>Penuh</span>
+                <span className="legend-dot legend-dot--busy" aria-hidden="true" />
+                <span>Ada jadwal</span>
               </>
             )}
           </div>
