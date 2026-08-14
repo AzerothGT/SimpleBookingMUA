@@ -18,3 +18,11 @@ export function getScheduleCalendar(from, to) {
 export function createBooking(booking) {
   return apiClient.post('/bookings', booking)
 }
+
+export function listBookings() {
+  return apiClient.get('/bookings')
+}
+
+export function login(credentials) {
+  return apiClient.post('/login', credentials)
+}
