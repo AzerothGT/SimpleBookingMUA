@@ -27,13 +27,20 @@
 
 @layer components {
   .site-header { @apply mx-auto flex max-w-[1240px] items-center justify-between px-10 py-7; }
-  .brand { @apply border-0 bg-transparent p-0 text-[17px] font-extrabold tracking-[-.04em]; color: var(--ink); }
+  .brand { @apply border-0 bg-transparent p-0 text-[17px] font-extrabold tracking-[-.04em] no-underline; color: var(--ink); }
   .location-label, .eyebrow, .step-counter, .step-kicker, .pending-pill, .art-caption { @apply font-mono text-[.625rem] uppercase leading-[1.5] tracking-[.08em]; color: var(--muted); }
-  .header-cta { @apply text-xs font-extrabold no-underline; color: var(--ink); }
+  .nav-links { @apply flex items-center gap-6; }
+  .nav-link { @apply relative py-2 text-xs font-bold no-underline transition; color: var(--muted); }
+  .nav-link:hover, .nav-link.active { color: var(--ink); }
+  .nav-link.active::after { @apply absolute bottom-0 left-0 right-0 h-px; background: var(--orange); content: ''; }
+  .header-cta { @apply inline-flex min-h-[42px] items-center justify-center px-4 text-xs font-extrabold no-underline transition; color: var(--ink); background: var(--lime); }
+  .header-cta:hover { @apply -translate-y-0.5; background: #c8e45b; }
   .header-cta, .button { @apply gap-3; }
   .header-cta span, .button span, .header-cta svg, .button svg { @apply ml-0; color: var(--orange); }
   .button svg { @apply self-center; }
 
+  .home-page { transition: opacity .32s ease, transform .32s ease; }
+  .home-page.is-leaving { opacity: 0; pointer-events: none; transform: translateY(-1.5rem); }
   .hero-section { @apply mx-auto grid max-w-[1240px] gap-[2rem] px-[2.5rem] pb-[6rem] pt-[4rem]; min-height: 540px; grid-template-columns: minmax(0, 1fr) minmax(320px, .72fr); }
   .hero-copy { @apply max-w-[620px] self-center; }
   .hero-copy h1, .success-card h1 { @apply font-display text-[clamp(50px,7vw,94px)] font-normal leading-[.94] tracking-[-.075em]; color: var(--ink); }
@@ -61,6 +68,8 @@
   .art-caption { @apply absolute bottom-[19px] right-5 z-[3]; }
 
   .booking-shell { @apply mx-auto max-w-[1240px] border-t bg-[var(--surface)] px-10 pb-12 pt-10; border-color: var(--line); min-height: 0; scroll-margin-top: .75rem; }
+  .booking-cancel { @apply mb-4 inline-flex items-center gap-2 border-0 bg-transparent p-0 text-xs font-bold no-underline transition; color: var(--muted); }
+  .booking-cancel:hover { color: var(--ink); }
   .section-heading { @apply flex items-end justify-between; }
   .section-heading h2 { @apply m-0 mt-3 font-display text-5xl font-normal leading-[1.05] tracking-[-.06em]; color: var(--ink); }
   .step-counter { color: var(--ink); }
@@ -70,6 +79,16 @@
   .progress i { @apply not-italic; color: var(--orange); }
   .booking-grid { @apply grid gap-8; grid-template-columns: minmax(0, 1.45fr) minmax(250px, .65fr); }
   .form-panel { min-height: 0; }
+  .step-transition-forward { animation: step-slide-from-right .28s ease-out both; }
+  .step-transition-backward { animation: step-slide-from-left .28s ease-out both; }
+  @keyframes step-slide-from-right {
+    from { opacity: .4; transform: translateX(2rem); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes step-slide-from-left {
+    from { opacity: .4; transform: translateX(-2rem); }
+    to { opacity: 1; transform: translateX(0); }
+  }
   .muted-text, .help-text { @apply text-[13px] leading-[1.7]; color: var(--muted); }
   fieldset { @apply m-0 border-0 p-0; }
   legend, .field > span { @apply mb-3 block text-xs font-extrabold leading-[1.5]; color: var(--ink); }
@@ -178,24 +197,26 @@
   .optional-toggle.open .optional-toggle-icon { transform: rotate(180deg); }
   .optional-fields { @apply mb-2; }
   .summary-panel { @apply self-start p-6; background: var(--green); color: #f5f7ec; }
-  .summary-top { @apply flex items-start justify-between; }
+  .summary-top { @apply flex items-start justify-between gap-4; }
   .summary-panel .eyebrow { color: #a9c0ae; }
-  .pending-pill { @apply border px-2 py-1.5 text-[.5rem]; border-color: rgba(217,242,107,.5); color: var(--lime); }
-  .summary-note { @apply mt-3 text-xs leading-[1.6]; color: #b5cbb9; }
-  .summary-service { @apply my-9 flex items-start gap-3 border-b pb-6; border-color: rgba(223,231,215,.25); }
-  .summary-number { @apply font-mono text-[.6875rem]; color: var(--lime); }
+  .pending-pill { @apply shrink-0 border px-2 py-1.5 text-[.625rem] font-bold; border-color: rgba(217,242,107,.5); color: var(--lime); }
+  .summary-note { @apply mt-2 text-xs leading-[1.6]; color: #b5cbb9; }
+  .summary-service { @apply my-8 flex items-start gap-3 border-b pb-6; border-color: rgba(223,231,215,.25); }
+  .summary-number { @apply pt-1 font-mono text-[.6875rem]; color: var(--lime); }
+  .summary-service-content { @apply min-w-0; }
+  .summary-label { @apply mb-2 block font-mono text-[.6875rem] uppercase leading-[1.5] tracking-[.08em]; color: #a9c0ae; }
   .summary-service strong, .summary-service small { @apply block; }
   .summary-service strong { @apply font-display text-2xl font-normal leading-[1.05] tracking-[-.04em]; }
-  .summary-service small { @apply mt-2 font-mono text-[.625rem] leading-[1.5]; color: #b5cbb9; }
+  .summary-service small { @apply mt-3 font-mono text-sm font-bold leading-[1.5]; color: var(--lime); }
   .summary-panel dl { @apply m-0; }
-  .summary-panel dl div { @apply flex justify-between border-b py-3; border-color: rgba(223,231,215,.14); }
-  .summary-panel dt { @apply font-mono text-[.625rem] uppercase leading-[1.5]; color: #a9c0ae; }
-  .summary-panel dd { @apply m-0 max-w-[55%] overflow-hidden text-right text-[.6875rem] leading-[1.5]; text-overflow: ellipsis; white-space: nowrap; }
+  .summary-panel dl div { @apply flex items-start justify-between gap-4 border-b py-2.5; border-color: rgba(223,231,215,.14); }
+  .summary-panel dt { @apply shrink-0 font-mono text-[.6875rem] uppercase leading-[1.5]; color: #a9c0ae; }
+  .summary-panel dd { @apply m-0 max-w-[60%] overflow-hidden text-right text-xs leading-[1.5]; text-overflow: ellipsis; white-space: nowrap; }
   .summary-foot { @apply mt-7 flex items-center justify-between font-mono text-[.5625rem] leading-[1.5]; color: #b5cbb9; }
   .summary-foot span:last-child { @apply text-[15px]; color: var(--lime); }
-  .form-actions { @apply col-span-full flex items-center justify-between gap-3; }
+  .form-actions { @apply col-span-full flex items-start justify-between gap-3; margin-top: 0.5rem; }
   .form-actions .button-secondary { @apply min-h-[50px]; }
-  .form-actions-main { @apply flex items-center gap-3 ml-auto; }
+  .form-actions-main { @apply ml-auto flex items-center gap-3; }
   .form-actions .submit-error { @apply ml-2; }
 
   .site-footer { @apply mx-auto flex max-w-[1240px] justify-between border-t px-10 pb-7 pt-6 font-mono text-[.5625rem] uppercase tracking-[.03em]; border-color: var(--line); }
@@ -215,7 +236,11 @@
   .toast-close:hover { color: var(--ink); }
   .success-page { @apply flex min-h-screen items-center justify-center p-8; }
   .success-card { @apply max-w-[590px] bg-[var(--surface)] p-14 text-center; }
-  .success-mark { @apply mx-auto my-7 flex h-[62px] w-[62px] items-center justify-center rounded-full text-[28px]; background: var(--lime); color: var(--green); }
+  .success-mark { @apply mx-auto my-7 flex h-[62px] w-[62px] items-center justify-center rounded-full; background: var(--lime); color: var(--green); animation: success-mark-in .45s cubic-bezier(.22, 1, .36, 1) both; }
+  .success-check { @apply h-8 w-8; }
+  .success-check path { stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: success-check-draw .5s ease-out .25s forwards; }
+  @keyframes success-mark-in { from { opacity: 0; transform: scale(.65); } to { opacity: 1; transform: scale(1); } }
+  @keyframes success-check-draw { to { stroke-dashoffset: 0; } }
   .success-card h1 { @apply mb-5 text-[clamp(44px,7vw,67px)]; }
   .success-card > p { @apply text-sm leading-[1.7]; color: var(--muted); }
   .next-card { @apply my-8 bg-[var(--paper)] p-6 text-left; }
@@ -290,7 +315,9 @@
 
 @media (max-width: 760px) {
   .site-header { @apply px-5 py-7; }
-  .location-label { @apply hidden; }
+  .nav-links { @apply gap-3; }
+  .nav-link { @apply hidden; }
+  .header-cta { @apply min-h-[40px] px-3 text-[.6875rem]; }
   .hero-section { @apply block min-h-0 px-5 pb-[4.5rem] pt-[4rem]; }
   .hero-copy h1 { @apply text-[clamp(50px,16vw,75px)]; }
   .hero-art { @apply mx-[7px] mt-[3rem] h-[300px]; }
@@ -307,12 +334,19 @@
   .date-details { @apply min-h-0 border-l-0 border-t pl-0 pt-5; }
   .date-details .detail-group { @apply mt-2; }
   .date-row, .field-row { @apply grid-cols-1; }
-  .form-actions { @apply flex-col-reverse items-stretch; }
+  .form-actions { @apply mt-0 flex-col-reverse items-stretch; }
   .form-actions .button { @apply w-full; }
   .form-actions-main { @apply w-full flex-col items-stretch; }
   .form-actions .submit-error { @apply m-0; }
   .site-footer { @apply flex-col items-start gap-2 px-5 pb-6 pt-6; }
   .success-card { @apply px-6 py-10; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-page { transition: none; }
+  .home-page.is-leaving { transform: none; }
+  .success-mark, .success-check path, .step-transition-forward, .step-transition-backward { animation: none; }
+  .success-check path { stroke-dashoffset: 0; }
 }
 
 @media (min-width: 761px) and (max-height: 760px) {
@@ -336,6 +370,7 @@
   .summary-panel { @apply p-5; }
   .summary-note { @apply mt-2; }
   .summary-service { @apply mb-4 mt-5 pb-4; }
+  .summary-label { @apply mb-1; }
   .summary-panel dl div { @apply py-2; }
   .summary-foot { @apply mt-3; }
   .detail-group + .detail-group { @apply mt-5; }

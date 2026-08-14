@@ -1,12 +1,11 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle, Warning, X } from '@phosphor-icons/react'
-
-const ToastContext = createContext(null)
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CheckCircleIcon, WarningIcon, XIcon } from '@phosphor-icons/react'
+import { ToastContext } from './ToastContextValue'
 
 const TYPE_CONFIG = {
-  error: { icon: Warning, label: 'Terjadi kesalahan', accent: '#a03b1f' },
-  success: { icon: CheckCircle, label: 'Berhasil', accent: 'var(--green)' },
-  info: { icon: Warning, label: 'Perhatian', accent: 'var(--orange)' },
+  error: { icon: WarningIcon, label: 'Terjadi kesalahan', accent: '#a03b1f' },
+  success: { icon: CheckCircleIcon, label: 'Berhasil', accent: 'var(--green)' },
+  info: { icon: WarningIcon, label: 'Perhatian', accent: 'var(--orange)' },
 }
 
 const LEAVE_MS = 250
@@ -76,7 +75,7 @@ export function ToastProvider({ children }) {
                 {item.message && <p className="toast-message">{item.message}</p>}
               </div>
               <button type="button" className="toast-close" onClick={() => dismiss(item.id)} aria-label="Tutup notifikasi">
-                <X size={16} weight="bold" aria-hidden="true" />
+                <XIcon size={16} weight="bold" aria-hidden="true" />
               </button>
             </div>
           )
@@ -86,8 +85,3 @@ export function ToastProvider({ children }) {
   )
 }
 
-export function useToast() {
-  const context = useContext(ToastContext)
-  if (!context) throw new Error('useToast must be used within a ToastProvider')
-  return context
-}

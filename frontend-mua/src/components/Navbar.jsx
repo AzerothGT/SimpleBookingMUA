@@ -5,9 +5,9 @@ export default function Navbar() {
 
   return (
     <header className="site-header">
-      <Link className="brand" to="/" aria-label="Kembali ke beranda">[Nama MUA]</Link>
-      <nav className="flex items-center gap-6" aria-label="Navigasi utama">
-        <Link className={location.pathname === '/services' ? 'header-cta' : 'location-label'} to="/services">Layanan</Link>
+      <Link className="brand" to="/" aria-label="Kembali ke beranda">Cantik itu Pilihan</Link>
+      <nav className="nav-links" aria-label="Navigasi utama">
+        <Link className={`nav-link ${location.pathname === '/services' ? 'active' : ''}`} to="/services" aria-current={location.pathname === '/services' ? 'page' : undefined}>Layanan</Link>
         <Link className="header-cta" to="/booking">Mulai booking</Link>
       </nav>
     </header>

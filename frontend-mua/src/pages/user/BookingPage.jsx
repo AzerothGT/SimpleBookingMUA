@@ -1,18 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, ArrowUpRight, CaretDown, Check, Warning } from '@phosphor-icons/react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, CaretDownIcon, WarningIcon } from '@phosphor-icons/react'
 import { createBooking, listServices } from '../../api/bookingApi'
 import AnalogTimePicker from '../../components/AnalogTimePicker'
 import BookingCalendar from '../../components/BookingCalendar'
-import Navbar from '../../components/Navbar'
-import { useToast } from '../../context/ToastContext'
 
-const fallbackServices = [
-  { id: 'fallback-natural', name: 'Makeup Natural', price: 500000, description: 'Fresh, ringan, dan effortless.' },
-  { id: 'fallback-party', name: 'Makeup Party', price: 750000, description: 'Lebih polished untuk momen spesial.' },
-  { id: 'fallback-wedding', name: 'Makeup Wedding', price: 1500000, description: 'Look lengkap untuk hari istimewa.' },
-  { id: 'fallback-graduation', name: 'Makeup Graduation', price: 600000, description: 'Tahan lama untuk hari kelulusan.' },
-  { id: 'fallback-photoshoot', name: 'Makeup Photoshoot', price: 800000, description: 'Detail siap tampil di kamera.' },
-]
+import { useToast } from '../../context/useToast'
+
 
 const emptyForm = {
   serviceItems: [],
@@ -35,13 +29,16 @@ function unwrapData(payload) {
 
 
 export default function BookingPage() {
+  const navigate = useNavigate()
 
-  const [services, setServices] = useState(fallbackServices)
+  const [services, setServices] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [step, setStep] = useState(1)
+  const [stepDirection, setStepDirection] = useState('forward')
   const [calendarAvailability, setCalendarAvailability] = useState({ busyRanges: [], loading: true, error: '' })
   const [errors, setErrors] = useState({})
   const [submitState, setSubmitState] = useState({ status: 'idle', message: '' })
+  const [navigationLoading, setNavigationLoading] = useState(false)
   const [servicesLoading, setServicesLoading] = useState(true)
   const [servicesError, setServicesError] = useState('')
   const [showOptional, setShowOptional] = useState(false)
@@ -84,18 +81,23 @@ export default function BookingPage() {
           price: Number(service.price ?? 0),
           description: service.description ?? 'Layanan makeup sesuai kebutuhanmu.',
         }))
-        if (apiServices.length) setServices(apiServices)
+        if (apiServices.length) {
+          setServices(apiServices)
+        } else {
+          setServicesError('Belum ada layanan aktif.')
+        }
       })
       .catch(() => {
+        setServices([])
         setServicesError('Katalog layanan belum terhubung.')
-        toast({ type: 'error', title: 'Katalog layanan gagal dimuat', message: 'Menampilkan daftar layanan bawaan. Kamu tetap bisa melanjutkan booking.' })
+        toast({ type: 'error', title: 'Katalog layanan gagal dimuat', message: 'Booking belum dapat dikirim sampai katalog layanan tersedia.' })
       })
       .finally(() => active && setServicesLoading(false))
 
     return () => {
       active = false
     }
-  }, [])
+  }, [toast])
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -126,7 +128,8 @@ export default function BookingPage() {
 
   const validateStepOne = () => {
     const nextErrors = {}
-    if (!form.serviceItems.length) nextErrors.serviceItems = 'Pilih minimal satu layanan.'
+    if (!services.length || servicesError) nextErrors.serviceItems = 'Katalog layanan belum tersedia.'
+    else if (!form.serviceItems.length) nextErrors.serviceItems = 'Pilih minimal satu layanan.'
     return nextErrors
   }
 
@@ -147,11 +150,15 @@ export default function BookingPage() {
     return nextErrors
   }
 
-  const validateStepFour = () => ({})
 
   const validators = [validateStepOne, validateStepTwo, validateStepThree]
 
+  const finishNavigation = () => {
+    requestAnimationFrame(() => setNavigationLoading(false))
+  }
+
   const nextStep = () => {
+    if (navigationLoading) return
     const nextErrors = validators[step - 1]?.() ?? {}
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors)
@@ -164,17 +171,20 @@ export default function BookingPage() {
       highlightErrors(Object.keys(nextErrors))
       return
     }
+    setNavigationLoading(true)
+    setStepDirection('forward')
     setErrors({})
     setStep((current) => Math.min(current + 1, 4))
     if (step === 1) window.dispatchEvent(new CustomEvent('booking_form_start'))
+    finishNavigation()
   }
 
   const submitBooking = async (event) => {
     event.preventDefault()
-    const nextErrors = validateStepThree()
+    const nextErrors = { ...validateStepOne(), ...validateStepThree() }
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors)
-      setStep(3)
+      setStep(Object.hasOwn(nextErrors, 'serviceItems') ? 1 : 3)
       toast({
         type: 'error',
         title: 'Lengkapi data sebelum mengirim',
@@ -196,7 +206,7 @@ export default function BookingPage() {
         client_requested_end_time: form.endTime,
         notes: form.notes || undefined,
       })
-      setSubmitState({ status: 'success', message: 'Pengajuan booking diterima dengan status pending.' })
+      setSubmitState({ status: 'success', message: 'Pengajuan booking berhasil dikirim.' })
       window.dispatchEvent(new CustomEvent('booking_submit_success'))
     } catch (error) {
       const validationErrors = error.payload?.errors ?? {}
@@ -214,6 +224,14 @@ export default function BookingPage() {
     }
   }
 
+  const goToPreviousStep = () => {
+    if (navigationLoading) return
+    setNavigationLoading(true)
+    setStepDirection('backward')
+    setStep((current) => Math.max(current - 1, 1))
+    finishNavigation()
+  }
+
   const resetBooking = () => {
     setForm(emptyForm)
     setStep(1)
@@ -227,15 +245,19 @@ export default function BookingPage() {
       <main className="success-page">
         <div className="success-card">
           <span className="eyebrow">Pengajuan terkirim</span>
-          <div className="success-mark" aria-hidden="true"><Check size={30} weight="bold" /></div>
-          <h1>Booking-mu masuk sebagai pending.</h1>
-          <p>{submitState.message} Staff akan meninjau tanggal, lokasi, dan kebutuhan layanan sebelum menentukan jam mulai aktual.</p>
+          <div className="success-mark" aria-hidden="true">
+            <svg className="success-check" viewBox="0 0 32 32" fill="none">
+              <path d="M7 16.5 13 22 25 10" pathLength="1" />
+            </svg>
+          </div>
+          <h1>Pengajuan booking berhasil dikirim.</h1>
+          <p>{submitState.message} Tim kami akan meninjau tanggal, lokasi, dan kebutuhan layananmu sebelum mengonfirmasi jadwal.</p>
           <div className="next-card">
-            <strong>Langkah berikutnya</strong>
+            <strong>Selanjutnya</strong>
             <ol>
-              <li>Staff mengecek ketersediaan dan lokasi.</li>
-              <li>Staff menetapkan jam mulai aktual.</li>
-              <li>Instruksi pembayaran dikirim melalui Midtrans.</li>
+              <li>Tim kami mengecek ketersediaan jadwal dan lokasi.</li>
+              <li>Jadwal mulai akan dikonfirmasi setelah peninjauan selesai.</li>
+              <li>Staff atau tim kami akan menghubungimu melalui WhatsApp.</li>
             </ol>
           </div>
           <button className="button button-secondary" onClick={resetBooking}>Ajukan booking lain</button>
@@ -246,10 +268,9 @@ export default function BookingPage() {
 
   return (
     <main className="booking-page">
-      <Navbar />
       <section className="booking-shell" id="booking" aria-labelledby="booking-title">
         <div className="section-heading">
-          <div><h2 id="booking-title">Booking</h2></div>
+          <div><button type="button" className="booking-cancel" onClick={() => navigate('/')}><ArrowLeftIcon size={14} weight="bold" aria-hidden="true" /> Batal dan kembali</button><h2 id="booking-title">Booking</h2></div>
           <span className="step-counter">0{step} / 04</span>
         </div>
         <div className="progress" aria-label={`Tahap ${step} dari 4`}>
@@ -257,7 +278,7 @@ export default function BookingPage() {
         </div>
 
         <form className="booking-grid" onSubmit={submitBooking} noValidate>
-          <div className="form-panel">
+          <div className={`form-panel step-transition step-transition-${stepDirection}`}>
             {step === 1 && <>
 
               <fieldset id="field-serviceItems">
@@ -290,9 +311,17 @@ export default function BookingPage() {
                         <b>{formatPrice(service.price)}</b>
                         {selected && (
                           <div className="qty-control">
-                            <button type="button" className="qty-btn" onClick={() => updateQty(service.id, -1)}>−</button>
+                            <button type="button" className="qty-btn" disabled={navigationLoading} onClick={() => {
+                              setNavigationLoading(true)
+                              updateQty(service.id, -1)
+                              finishNavigation()
+                            }}>−</button>
                             <span className="qty-value">{item.qty}</span>
-                            <button type="button" className="qty-btn" onClick={() => updateQty(service.id, 1)}>+</button>
+                            <button type="button" className="qty-btn" disabled={navigationLoading} onClick={() => {
+                              setNavigationLoading(true)
+                              updateQty(service.id, 1)
+                              finishNavigation()
+                            }}>+</button>
                           </div>
                         )}
                       </label>
@@ -363,12 +392,18 @@ export default function BookingPage() {
                 <button
                   type="button"
                   className={`optional-toggle ${showOptional ? 'open' : ''}`}
-                  onClick={() => setShowOptional((value) => !value)}
+                  onClick={() => {
+                    if (navigationLoading) return
+                    setNavigationLoading(true)
+                    setShowOptional((value) => !value)
+                    finishNavigation()
+                  }}
+                  disabled={navigationLoading}
                   aria-expanded={showOptional}
                   aria-controls="optional-details"
                 >
                   <span>{showOptional ? 'Sembunyikan' : 'Tambah'} detail opsional</span>
-                  <CaretDown className="optional-toggle-icon" size={14} weight="bold" aria-hidden="true" />
+                  <CaretDownIcon className="optional-toggle-icon" size={14} weight="bold" aria-hidden="true" />
                 </button>
                 {showOptional || errors.mapsUrl || errors.notes ? (
                   <div className="optional-fields" id="optional-details">
@@ -392,25 +427,40 @@ export default function BookingPage() {
           </div>
 
           <aside className="summary-panel" aria-label="Ringkasan booking">
-            <div className="summary-top"><span className="eyebrow">Ringkasan</span><span className="pending-pill">Pending</span></div>
-                        <p className="summary-note">Pengajuan akan ditinjau staff sebelum dikonfirmasi.</p>
-            <div className="summary-service"><span className="summary-number">01</span><div><strong>{form.serviceItems.map(item => {
-              const s = services.find(sv => sv.id === item.id)
-              return s ? `${s.name} × ${item.qty}` : ''
-            }).join(', ') || 'Belum memilih layanan'}</strong><small>{form.serviceItems.length
-              ? `Total: ${formatPrice(form.serviceItems.reduce((sum, item) => {
-                  const s = services.find(sv => sv.id === item.id)
-                  return sum + (s ? s.price * item.qty : 0)
-                }, 0))}`
-              : 'Harga mulai'}</small></div></div>
-            <dl><div><dt>Tanggal</dt><dd>{formatDayLabel(form.date)}</dd></div><div><dt>Jam selesai</dt><dd>{form.endTime || 'Belum diusulkan'}</dd></div><div><dt>Lokasi</dt><dd>{form.address || 'Belum diisi'}</dd></div></dl>
+            <div className="summary-top">
+              <div>
+                <span className="eyebrow">Ringkasan booking</span>
 
+              </div>
+              <span className="pending-pill">Menunggu konfirmasi</span>
+            </div>
+            <div className="summary-service">
+              <span className="summary-number">01</span>
+              <div className="summary-service-content">
+                <span className="summary-label">Layanan</span>
+                <strong>{form.serviceItems.map((item) => {
+                  const service = services.find((current) => current.id === item.id)
+                  return service ? `${service.name} × ${item.qty}` : ''
+                }).join(', ') || 'Belum memilih layanan'}</strong>
+                <small>{form.serviceItems.length
+                  ? `Total ${formatPrice(form.serviceItems.reduce((sum, item) => {
+                      const service = services.find((current) => current.id === item.id)
+                      return sum + (service ? service.price * item.qty : 0)
+                    }, 0))}`
+                  : 'Total akan muncul setelah memilih layanan'}</small>
+              </div>
+            </div>
+            <dl>
+              <div><dt>Tanggal</dt><dd>{formatDayLabel(form.date)}</dd></div>
+              <div><dt>Jam selesai</dt><dd>{form.endTime || 'Belum diusulkan'}</dd></div>
+              <div><dt>Lokasi</dt><dd>{form.address || 'Belum diisi'}</dd></div>
+            </dl>
           </aside>
 
           <div className="form-actions">
-            {step > 1 && <button type="button" className="button button-secondary" onClick={() => setStep((current) => current - 1)}><ArrowLeft size={16} weight="bold" aria-hidden="true" /> Kembali</button>}
+            {step > 1 && <button type="button" className="button button-secondary" disabled={navigationLoading} onClick={goToPreviousStep}><ArrowLeftIcon size={16} weight="bold" aria-hidden="true" /> Kembali</button>}
             <div className="form-actions-main">
-              {step < 4 ? <button type="button" className="button button-primary" onClick={nextStep}>{step === 1 ? 'Lanjut pilih tanggal' : step === 2 ? 'Lanjut isi detail' : 'Tinjau pengajuan'} <ArrowRight size={16} weight="bold" aria-hidden="true" /></button> : <button type="submit" className="button button-primary" disabled={submitState.status === 'loading'}>{submitState.status === 'loading' ? 'Mengirim...' : 'Kirim pengajuan booking'} <ArrowUpRight size={16} weight="bold" aria-hidden="true" /></button>}
+              {step < 4 ? <button type="button" className="button button-primary" disabled={navigationLoading} onClick={nextStep}>{navigationLoading ? <><span className="spinner" aria-hidden="true" /> Memproses...</> : <>{step === 1 ? 'Lanjut pilih tanggal' : step === 2 ? 'Lanjut isi detail' : 'Tinjau pengajuan'} <ArrowRightIcon size={16} weight="bold" aria-hidden="true" /></>}</button> : <button type="submit" className="button button-primary" disabled={submitState.status === 'loading' || navigationLoading}>{submitState.status === 'loading' ? 'Mengirim...' : 'Kirim pengajuan booking'} <ArrowUpRightIcon size={16} weight="bold" aria-hidden="true" /></button>}
             </div>
           </div>
         </form>
@@ -437,7 +487,7 @@ function formatDayLabel(value) {
 
 function CalendarAvailability({ selectedDate, availability }) {
   if (!selectedDate) return null
-  if (availability.error) return <div className="schedule-status error" role="status"><Warning size={16} weight="bold" aria-hidden="true" /><p>{availability.error}</p></div>
+  if (availability.error) return <div className="schedule-status error" role="status"><WarningIcon size={16} weight="bold" aria-hidden="true" /><p>{availability.error}</p></div>
   if (!availability.busyRanges.length) return null
 
   return (
