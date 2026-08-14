@@ -76,35 +76,60 @@ export default function BookingCalendar({ selectedDate, onSelectedDateChange, on
     })
   }, [busyByDate, error, loading, onAvailabilityChange, selectedDate])
 
-  const busyDates = useMemo(() => [...busyByDate.keys()].map(parseDate), [busyByDate])
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const dotClass = error
-    ? 'legend-dot legend-dot--error'
-    : loading
-      ? 'legend-dot legend-dot--loading'
-      : 'legend-dot'
-
   return (
     <div className="booking-calendar" aria-label="Pilih tanggal makeup">
-      <DayPicker
-        mode="single"
-        locale={id}
-        month={month}
-        onMonthChange={setMonth}
-        selected={selected}
-        onSelect={(date) => date && onSelectedDateChange(formatDate(date))}
-        disabled={{ before: today }}
-        modifiers={{ busy: busyDates }}
-        fixedWeeks
-        showOutsideDays
-      />
-      <div className="calendar-legend" aria-label="Keterangan kalender: titik oranye = tanggal dengan jadwal tercatat, tetap bisa dipilih">
-        <span className={dotClass} aria-hidden="true" />
-        <span>Jadwal tercatat</span>
-        {!loading && <span className="legend-note">tetap bisa dipilih</span>}
-      </div>
+      {loading ? (
+        <div className="calendar-loading" role="status">
+          <span className="spinner" aria-hidden="true" />
+          <p>Memuat jadwal bulan ini...</p>
+        </div>
+      ) : (
+        <>
+          <DayPicker
+            mode="single"
+            locale={id}
+            month={month}
+            onMonthChange={setMonth}
+            selected={selected}
+            onSelect={(date) => date && onSelectedDateChange(formatDate(date))}
+            disabled={[
+              { before: today },
+              (date) => {
+                if (loading || error) return false
+                return busyByDate.has(formatDate(date))
+              },
+            ]}
+            modifiers={{
+              free: (date) => {
+                if (loading || error) return false
+                if (date.getMonth() !== month.getMonth()) return false
+                if (date < today) return false
+                return !busyByDate.has(formatDate(date))
+              },
+            }}
+            fixedWeeks
+            showOutsideDays
+          />
+          <div className="calendar-legend" aria-label="Keterangan kalender: hijau = tanggal tersedia, abu = tanggal penuh">
+            {error ? (
+              <>
+                <span className="legend-dot legend-dot--error" aria-hidden="true" />
+                <span>Gagal memuat</span>
+              </>
+            ) : (
+              <>
+                <span className="legend-dot legend-dot--free" aria-hidden="true" />
+                <span>Tersedia</span>
+                <span className="legend-dot legend-dot--full" aria-hidden="true" />
+                <span>Penuh</span>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }

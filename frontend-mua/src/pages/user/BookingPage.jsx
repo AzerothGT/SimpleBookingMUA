@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Warning } from '@phosphor-icons/react'
 import { createBooking, listServices } from '../../api/bookingApi'
+import AnalogTimePicker from '../../components/AnalogTimePicker'
 import BookingCalendar from '../../components/BookingCalendar'
 import Navbar from '../../components/Navbar'
 
@@ -277,15 +278,9 @@ export default function BookingPage() {
                   onAvailabilityChange={handleAvailabilityChange}
                 />
                 <div className="date-details">
-                  <div>
-                    <span className="step-kicker">Tanggal terpilih</span>
-                    <strong className="selected-date">{formatDayLabel(form.date)}</strong>
-                    {errors.date && <small id="booking-date-error" className="field-error">{errors.date}</small>}
-                  </div>
                   <CalendarAvailability selectedDate={form.date} availability={calendarAvailability} />
                   <fieldset className="detail-group">
-                    <legend>Jam</legend>
-                    <label className="field"><span>Jam selesai yang diusulkan</span><input id="end-time" type="time" value={form.endTime} onChange={(event) => updateField('endTime', event.target.value)} aria-invalid={Boolean(errors.endTime)} aria-describedby={errors.endTime ? 'end-time-error' : undefined} />{errors.endTime && <small id="end-time-error" className="field-error">{errors.endTime}</small>}</label>
+                    <div className="field"><AnalogTimePicker value={form.endTime} onChange={(v) => updateField('endTime', v)} />{errors.endTime && <small id="end-time-error" className="field-error" role="alert">{errors.endTime}</small>}</div>
                   </fieldset>
                 </div>
               </div>
@@ -367,10 +362,9 @@ function formatDayLabel(value) {
 }
 
 function CalendarAvailability({ selectedDate, availability }) {
-  if (!selectedDate) return <div className="schedule-status idle"><p>Pilih tanggal untuk melihat jadwal final.</p></div>
-  if (availability.loading) return <div className="schedule-status loading" role="status"><span className="spinner" /><p>Memuat jadwal bulan ini...</p></div>
+  if (!selectedDate) return null
   if (availability.error) return <div className="schedule-status error" role="status"><Warning size={16} weight="bold" aria-hidden="true" /><p>{availability.error}</p></div>
-  if (!availability.busyRanges.length) return <div className="schedule-status empty" role="status"><Check size={16} weight="bold" aria-hidden="true" /><p>Belum ada jadwal final tercatat.</p></div>
+  if (!availability.busyRanges.length) return null
 
   return (
     <div className="busy-ranges" aria-live="polite">

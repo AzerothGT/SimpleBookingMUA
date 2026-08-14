@@ -104,29 +104,15 @@
   .schedule-status.busy, .schedule-status.error { @apply bg-[#fff0e8]; color: #99532f; }
   .spinner { @apply h-[15px] w-[15px] animate-spin rounded-full border-2; border-color: var(--line); border-top-color: var(--green); }
   .step-two-layout { @apply grid items-start gap-5; grid-template-columns: minmax(286px, .95fr) minmax(210px, .8fr); }
-  .booking-calendar { @apply w-full border bg-[var(--paper)] px-3 py-4; border-color: var(--line); }
-  .booking-calendar .rdp-root { --rdp-accent-color: var(--green); --rdp-accent-background-color: var(--sage); --rdp-day-height: 40px; --rdp-day-width: 40px; --rdp-day_button-height: 34px; --rdp-day_button-width: 34px; --rdp-nav_button-height: 32px; --rdp-nav_button-width: 32px; --rdp-nav-height: 40px; @apply m-0 w-full; }
-  .booking-calendar .rdp-months, .booking-calendar .rdp-month, .booking-calendar .rdp-month_grid { @apply w-full; }
-  .booking-calendar .rdp-month_caption { @apply flex items-center justify-center font-display text-lg font-normal tracking-[-.02em]; color: var(--ink); }
-  .booking-calendar .rdp-nav { @apply absolute inset-x-0 top-0 flex items-center justify-between; }
-  .booking-calendar .rdp-button_previous, .booking-calendar .rdp-button_next { @apply z-[2] flex h-8 w-8 items-center justify-center rounded-full border transition; border-color: var(--line); color: var(--green); }
-  .booking-calendar .rdp-button_previous:hover, .booking-calendar .rdp-button_next:hover { @apply border-[var(--green)] bg-[var(--sage)]; }
-  .booking-calendar .rdp-chevron { fill: currentColor; }
-  .booking-calendar .rdp-weekday { @apply h-[26px] p-0 font-mono text-[.5625rem] font-medium uppercase tracking-[.06em]; color: var(--muted); }
-  .booking-calendar .rdp-day { @apply relative p-0 font-mono text-[.75rem] transition; color: var(--ink); }
-  .booking-calendar .rdp-day_button { @apply relative mx-auto flex items-center justify-center rounded-full border text-[.75rem] transition-colors; border-color: transparent; }
-  .booking-calendar .rdp-busy:not(.rdp-outside) .rdp-day_button { background: #eef4e8; }
-  .booking-calendar .rdp-day_button:hover:not(:disabled) { @apply bg-[var(--sage)]; }
-  .booking-calendar .rdp-selected .rdp-day_button { @apply text-white shadow-sm; background: var(--green); border-color: var(--green); }
-  .booking-calendar .rdp-today:not(.rdp-selected) .rdp-day_button { border-color: var(--green); }
-  .booking-calendar .rdp-outside { opacity: .35; }
-  .booking-calendar .rdp-disabled { opacity: .28; }
-  .booking-calendar .rdp-busy:not(.rdp-outside)::after { @apply pointer-events-none absolute bottom-[3px] left-1/2 h-[5px] w-[5px] -translate-x-1/2 rounded-full; background: var(--orange); content: ''; }
-  .booking-calendar .rdp-busy.rdp-selected::after { background: var(--lime); }
-  .calendar-legend { @apply mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t pt-3 font-mono text-[.625rem] uppercase leading-[1.5] tracking-[.06em]; border-color: var(--line); color: var(--muted); }
+  .booking-calendar { @apply w-fit mx-auto border bg-[var(--paper)] px-3 py-4; border-color: var(--line); }
+  .calendar-loading { @apply flex min-h-[260px] min-w-[14rem] flex-col items-center justify-center gap-3; }
+  .calendar-loading p { @apply m-0 text-xs; color: var(--muted); }
+  .calendar-legend { @apply mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t pt-3 font-mono text-[.625rem] uppercase leading-[1.5] tracking-[.06em]; border-color: var(--line); color: var(--muted); }
   .calendar-legend .legend-dot { @apply inline-block h-2 w-2 rounded-full; background: var(--orange); }
   .calendar-legend .legend-dot--loading { @apply animate-pulse; background: var(--line); }
   .calendar-legend .legend-dot--error { background: #a03b1f; }
+  .calendar-legend .legend-dot--free { background: var(--green); }
+  .calendar-legend .legend-dot--full { background: var(--line); }
   .calendar-legend .legend-note { @apply normal-case text-[.5625rem] leading-[1.5]; color: var(--muted); opacity: .7; }
   .date-details { @apply flex min-h-[302px] flex-col gap-4 border-l pl-5; border-color: var(--line); }
   .date-details .step-kicker { @apply block; }
@@ -139,6 +125,24 @@
   .busy-ranges li { @apply flex items-center gap-2 font-mono text-[.6875rem]; color: var(--ink); }
   .busy-ranges li i { @apply h-px w-3; background: var(--orange); }
   .busy-ranges p { @apply mb-0 mt-2 text-[.625rem] leading-[1.5]; color: var(--muted); }
+  /* Analog Time Picker */
+  .analog-time-picker { @apply flex flex-col items-center gap-2; }
+  .atp-display { @apply flex items-center gap-1 font-mono; }
+  .atp-unit { @apply min-w-[34px] cursor-pointer border-0 bg-transparent px-1.5 py-1 text-[1.125rem] font-bold leading-none transition; border-radius: 6px; color: var(--muted); }
+  .atp-unit:hover { color: var(--ink); background: var(--sage); }
+  .atp-unit.active { background: var(--sage); color: var(--green); }
+  .atp-colon { @apply text-[1.125rem] font-bold; color: var(--muted); }
+  .atp-meridiem { @apply ml-1.5 cursor-pointer border px-2 py-1 text-[.6875rem] font-bold uppercase leading-none transition; border-color: var(--line); border-radius: 6px; color: var(--muted); }
+  .atp-meridiem:hover { border-color: var(--green); color: var(--ink); }
+  .atp-meridiem.active { background: var(--green); border-color: var(--green); color: #fff; }
+  .atp-clock { @apply mt-1; }
+  .atp-face { position: relative; width: 148px; height: 148px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); background: var(--paper); }
+  .atp-num { position: absolute; width: 30px; height: 30px; @apply flex items-center justify-center border-0 rounded-full bg-transparent font-mono text-xs font-semibold; color: var(--ink); cursor: pointer; transform: translate(-50%, -50%); transition: background .15s, color .15s; z-index: 2; touch-action: manipulation; }
+  .atp-num:hover { background: var(--sage); color: var(--green); }
+  .atp-num.selected { background: var(--green); color: #fff; }
+  .atp-hand { position: absolute; left: 50%; top: 50%; width: 2px; height: 50px; margin-left: -1px; margin-top: -50px; background: var(--green); border-radius: 1px; transform-origin: bottom center; transition: transform .2s ease; z-index: 1; }
+  .atp-pin { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin-left: -4px; margin-top: -4px; border-radius: 50%; background: var(--green); z-index: 3; }
+  .atp-hint { @apply text-[.625rem] leading-[1.5]; color: var(--muted); }
   .notice { @apply mt-6 flex items-start gap-3 border-l-2 pl-3; border-color: var(--orange); }
   .notice span { @apply font-mono; color: var(--orange); }
   .notice p { @apply m-0 text-xs leading-[1.6]; color: var(--muted); }
@@ -170,8 +174,7 @@
   .summary-panel dd { @apply m-0 max-w-[55%] overflow-hidden text-right text-[.6875rem] leading-[1.5]; text-overflow: ellipsis; white-space: nowrap; }
   .summary-foot { @apply mt-7 flex items-center justify-between font-mono text-[.5625rem] leading-[1.5]; color: #b5cbb9; }
   .summary-foot span:last-child { @apply text-[15px]; color: var(--lime); }
-  .form-actions { @apply col-span-full flex items-center gap-3; }
-  .form-actions .button-primary { @apply mt-0; }
+  .form-actions { @apply col-span-full flex items-center justify-between gap-3; }
   .form-actions .button-secondary { @apply min-h-[50px]; }
   .form-actions-main { @apply flex items-center gap-3 ml-auto; }
   .form-actions .submit-error { @apply ml-2; }
@@ -190,6 +193,48 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* unlayered: must beat the unlayered .button-primary margin in the media queries below */
+.form-actions .button { margin-top: 0; }
+
+/* unlayered: react-day-picker/style.css is imported unlayered, so layered rules would lose */
+.booking-calendar .rdp-root {
+  --rdp-accent-color: var(--green);
+  --rdp-accent-background-color: var(--sage);
+  --rdp-day-height: 2.5rem;
+  --rdp-day-width: 2.5rem;
+  --rdp-day_button-height: 2.125rem;
+  --rdp-day_button-width: 2.125rem;
+  --rdp-day_button-border: 1px solid transparent;
+  --rdp-selected-border: 1px solid var(--green);
+  --rdp-nav_button-height: 2rem;
+  --rdp-nav_button-width: 2rem;
+  --rdp-nav-height: 2.5rem;
+  --rdp-outside-opacity: .35;
+  --rdp-disabled-opacity: .28;
+  --rdp-weekday-opacity: 1;
+  --rdp-weekday-padding: 0;
+  @apply m-0 w-full;
+}
+.booking-calendar .rdp-months { width: fit-content; margin-inline: auto; }
+.booking-calendar .rdp-month, .booking-calendar .rdp-month_grid { @apply w-full; }
+.booking-calendar .rdp-month_caption { @apply flex items-center justify-center font-display text-lg font-normal tracking-[-.02em]; color: var(--ink); }
+.booking-calendar .rdp-nav { @apply absolute inset-x-0 top-0 flex items-center justify-between; }
+.booking-calendar .rdp-button_previous, .booking-calendar .rdp-button_next { @apply z-[2] flex items-center justify-center rounded-full border transition; border-color: var(--line); color: var(--green); }
+.booking-calendar .rdp-button_previous:hover:not(:disabled), .booking-calendar .rdp-button_next:hover:not(:disabled) { border-color: var(--green); background: var(--sage); }
+.booking-calendar .rdp-chevron { fill: currentColor; }
+.booking-calendar .rdp-weekday { @apply h-[1.625rem] font-mono text-[.5625rem] font-medium uppercase leading-[1.5] tracking-[.06em]; color: var(--muted); }
+.booking-calendar .rdp-day { @apply relative p-0 font-mono text-xs; color: var(--ink); }
+.booking-calendar .rdp-day_button { @apply mx-auto text-xs transition-colors; }
+.booking-calendar .rdp-busy:not(.rdp-outside) .rdp-day_button { background: #eef4e8; }
+.booking-calendar .rdp-free:not(.rdp-outside):not(.rdp-selected) .rdp-day_button { background: #eef4e8; }
+.booking-calendar .rdp-day_button:hover:not(:disabled) { background: var(--sage); }
+.booking-calendar .rdp-selected { @apply font-normal; font-size: inherit; }
+.booking-calendar .rdp-selected .rdp-day_button { @apply text-white shadow-sm; background: var(--green); }
+.booking-calendar .rdp-today:not(.rdp-selected) .rdp-day_button { border-color: var(--green); }
+.booking-calendar .rdp-busy:not(.rdp-outside)::after { @apply pointer-events-none absolute bottom-[.1875rem] left-1/2 h-[.3125rem] w-[.3125rem] -translate-x-1/2 rounded-full; background: var(--orange); content: ''; }
+.booking-calendar .rdp-busy.rdp-selected::after { background: var(--lime); }
+.booking-calendar .rdp-day_button:focus-visible, .booking-calendar .rdp-button_previous:focus-visible, .booking-calendar .rdp-button_next:focus-visible { @apply outline-0 ring-4 ring-[rgba(47,83,69,.1)]; border-color: var(--green); }
+
 @media (min-width: 761px) {
   .booking-page { @apply flex h-[100svh] flex-col overflow-hidden; }
   .booking-page .booking-shell { @apply w-full min-h-0 flex-1 overflow-y-auto; }
@@ -197,6 +242,17 @@
   .summary-panel { grid-column: 2; grid-row: 1 / span 2; position: sticky; top: 0; }
   .cart-summary { display: none; }
   .form-actions { grid-column: 1; grid-row: 2; }
+  /* Compact step 2: fit tanggal & jam in one screen without scroll */
+  .booking-shell { @apply pb-4 pt-5; }
+  .progress { @apply mb-4 mt-2; }
+  .section-heading h2 { @apply mt-1; }
+  .booking-grid { @apply gap-5; }
+  .step-two-layout { @apply gap-4; }
+  .booking-calendar { @apply py-3; }
+  .booking-calendar .rdp-root { --rdp-day-height: 2rem; --rdp-day-width: 2rem; --rdp-day_button-height: 1.75rem; --rdp-day_button-width: 1.75rem; --rdp-nav-height: 2rem; }
+  .booking-calendar .rdp-weekday { @apply h-[1.375rem]; }
+  .calendar-legend { @apply mt-2 pt-2; }
+  .date-details { @apply min-h-0; }
 }
 
 @media (max-width: 760px) {
@@ -214,7 +270,7 @@
   .service-list { @apply grid-cols-1; }
   .step-two-layout { @apply grid-cols-1; }
   .booking-calendar { @apply mx-auto max-w-[360px]; }
-  .booking-calendar .rdp-root { --rdp-day-height: 36px; --rdp-day-width: 36px; --rdp-day_button-height: 30px; --rdp-day_button-width: 30px; }
+  .booking-calendar .rdp-root { --rdp-day-height: 2.25rem; --rdp-day-width: 2.25rem; --rdp-day_button-height: 1.875rem; --rdp-day_button-width: 1.875rem; }
   .date-details { @apply min-h-0 border-l-0 border-t pl-0 pt-5; }
   .date-details .detail-group { @apply mt-2; }
   .date-row, .field-row { @apply grid-cols-1; }
@@ -241,7 +297,7 @@
   .step-two-layout { @apply gap-3; }
   .booking-calendar { @apply p-2; }
   .calendar-legend { @apply mt-1 pt-1; }
-  .date-details { @apply min-h-[286px] gap-3 pl-4; }
+  .date-details { @apply min-h-0 gap-3 pl-4; }
   .service-option { @apply min-h-[46px] py-1.5; }
   .form-actions .button { @apply min-h-[44px]; }
   .summary-panel { @apply p-5; }
