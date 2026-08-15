@@ -1,27 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowClockwiseIcon, CalendarBlankIcon, CheckCircleIcon, ClipboardTextIcon, CurrencyCircleDollarIcon, WarningCircleIcon } from '@phosphor-icons/react'
+import { formatCurrency, formatDashboardDate, normalizeBookings } from '../../api/adminApi'
 import { listBookings } from '../../api/bookingApi'
 import AgendaCard from '../../components/AgendaCard'
 import BookingTable from '../../components/BookingTable'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import MetricCard from '../../components/MetricCard'
-import { dashboardFixture, formatCurrency, formatDashboardDate, normalizeBookings } from './dashboardData'
-
 const todayKey = new Date().toISOString().slice(0, 10)
 
 export default function AdminDashboard() {
-  const [records, setRecords] = useState(dashboardFixture)
+  const [records, setRecords] = useState([])
   const [role, setRole] = useState(() => window.localStorage.getItem('demo_role') || 'admin')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isFallback, setIsFallback] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
 
   const loadDashboard = useCallback(async () => {
     setIsLoading(true)
     const token = window.localStorage.getItem('auth_token')
 
     if (!token) {
-      setIsFallback(true)
       setIsLoading(false)
       return
     }
@@ -29,14 +26,9 @@ export default function AdminDashboard() {
     try {
       const payload = await listBookings()
       const normalized = normalizeBookings(payload)
-      if (normalized.length > 0) {
-        setRecords(normalized)
-        setIsFallback(false)
-      } else {
-        setIsFallback(true)
-      }
+      setRecords(normalized)
     } catch {
-      setIsFallback(true)
+      setRecords([])
     } finally {
       setIsLoading(false)
     }
@@ -75,7 +67,7 @@ export default function AdminDashboard() {
             <div className="dashboard-actions"><span className="dashboard-date"><CalendarBlankIcon size={17} aria-hidden="true" /> Hari ini</span><button className="refresh-button" type="button" onClick={loadDashboard} disabled={isLoading}><ArrowClockwiseIcon size={17} className={isLoading ? 'is-spinning' : ''} aria-hidden="true" /> {isLoading ? 'Memuat' : 'Refresh'}</button></div>
           </header>
 
-          {isFallback && <div className="dashboard-notice" role="status"><WarningCircleIcon size={19} aria-hidden="true" /><span>Mode pratinjau aktif. Data contoh ditampilkan karena dashboard belum terhubung ke sesi admin.</span></div>}
+          {!isLoading && !window.localStorage.getItem('auth_token') && <div className="dashboard-notice" role="status"><WarningCircleIcon size={19} aria-hidden="true" /><span>Silakan masuk untuk melihat data booking.</span></div>}
 
           <div className="dashboard-metrics">
             <MetricCard label="Perlu ditindaklanjuti" value={metrics.attention} caption="Pengajuan menunggu jadwal" icon={WarningCircleIcon} />

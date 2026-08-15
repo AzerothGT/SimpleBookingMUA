@@ -1,4 +1,9 @@
-import { statusLabels } from '../pages/admin/dashboardData'
+const statusLabels = {
+  pending: 'Menunggu jadwal',
+  confirmed: 'Terkonfirmasi',
+  done: 'Selesai',
+  cancelled: 'Dibatalkan',
+}
 
 export default function StatusBadge({ status }) {
   const label = statusLabels[status] ?? status

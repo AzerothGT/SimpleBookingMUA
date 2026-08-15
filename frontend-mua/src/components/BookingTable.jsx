@@ -1,5 +1,5 @@
 import { ArrowUpRightIcon } from '@phosphor-icons/react'
-import { formatCurrency } from '../pages/admin/dashboardData'
+import { formatCurrency } from '../api/adminApi'
 import StatusBadge from './StatusBadge'
 
 export default function BookingTable({ items, isLoading, onOpenBooking }) {
