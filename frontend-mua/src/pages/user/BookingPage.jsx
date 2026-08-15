@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, CaretDownIcon, WarningIcon } from '@phosphor-icons/react'
+import { ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, CaretDownIcon, CheckIcon, CopyIcon, WarningIcon } from '@phosphor-icons/react'
 import { createBooking, createPublicSnapTransaction, getPublicBookingStatus, listServices, loadMidtransSnap } from '../../api/bookingApi'
 import AnalogTimePicker from '../../components/AnalogTimePicker'
 import BookingCalendar from '../../components/BookingCalendar'
@@ -48,6 +48,7 @@ export default function BookingPage() {
   const [publicBooking, setPublicBooking] = useState(null)
   const [publicError, setPublicError] = useState('')
   const [paymentLoading, setPaymentLoading] = useState(false)
+  const [copyState, setCopyState] = useState('idle')
   const [navigationLoading, setNavigationLoading] = useState(false)
   const [servicesLoading, setServicesLoading] = useState(true)
   const [servicesError, setServicesError] = useState('')
@@ -249,11 +250,22 @@ export default function BookingPage() {
     finishNavigation()
   }
 
+  const copyBookingId = async () => {
+    try {
+      await navigator.clipboard.writeText(publicSession.bookingId)
+      setCopyState('success')
+      window.setTimeout(() => setCopyState('idle'), 2000)
+    } catch {
+      setCopyState('error')
+    }
+  }
+
   const resetBooking = () => {
     window.localStorage.removeItem('public_booking_session')
     setPublicSession(null)
     setPublicBooking(null)
     setPublicError('')
+    setCopyState('idle')
     setForm(emptyForm)
     setStep(1)
     setErrors({})
@@ -323,7 +335,7 @@ export default function BookingPage() {
         <span className="eyebrow">Pengajuan terkirim</span><div className="success-mark" aria-hidden="true"><svg className="success-check" viewBox="0 0 32 32" fill="none"><path d="M7 16.5 13 22 25 10" pathLength="1" /></svg></div>
         <h1>{paid ? 'Pembayaran berhasil.' : scheduled ? 'Jadwal sudah tersedia.' : 'Menunggu konfirmasi jadwal.'}</h1>
         <p>{paid ? 'Pembayaran sedang tercatat di sistem.' : 'Simpan ID booking ini. Status akan diperbarui otomatis setelah tim menetapkan jadwal.'}</p>
-        <div className="public-booking-status"><span className="detail-label">Booking ID</span><strong>{publicSession.bookingId}</strong><span className="detail-label">Status</span><strong>{publicBooking?.status ?? 'pending'}</strong>{scheduled && <><span className="detail-label">Jadwal mulai</span><strong>{new Date(publicBooking.starts_at).toLocaleString('id-ID')}</strong></>}</div>
+        <div className="public-booking-status"><span className="detail-label">Booking ID</span><div className="public-booking-id-row"><strong>{publicSession.bookingId}</strong><button className="copy-booking-id" type="button" onClick={copyBookingId} aria-label={copyState === 'success' ? 'Booking ID tersalin' : `Salin booking ID ${publicSession.bookingId}`} title={copyState === 'success' ? 'Tersalin' : 'Salin booking ID'}>{copyState === 'success' ? <CheckIcon size={16} weight="bold" aria-hidden="true" /> : <CopyIcon size={16} weight="bold" aria-hidden="true" />}</button></div>{copyState === 'error' && <p className="copy-booking-id-error" role="alert">Tidak dapat menyalin otomatis. Pilih booking ID secara manual.</p>}<span className="detail-label">Status</span><strong>{publicBooking?.status ?? 'pending'}</strong>{scheduled && <><span className="detail-label">Jadwal mulai</span><strong>{new Date(publicBooking.starts_at).toLocaleString('id-ID')}</strong></>}</div>
         {publicError && <div className="login-error" role="alert">{publicError}</div>}
         {!paid && <button className="button button-primary" disabled={!scheduled || paymentLoading} onClick={startPayment}>{paymentLoading ? 'Menyiapkan pembayaran...' : scheduled ? 'Bayar sekarang' : 'Menunggu jadwal tim'}</button>}
         <button className="button button-secondary" onClick={resetBooking}>Ajukan booking lain</button>
