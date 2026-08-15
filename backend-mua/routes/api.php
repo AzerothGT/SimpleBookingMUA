@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\BookingTaskController;
+use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceImageController;
 use App\Http\Controllers\TransactionController;
@@ -25,6 +26,11 @@ Route::apiResource('services', ServiceController::class)->only(['index', 'show']
 Route::post('/bookings', [BookingController::class, 'store']);
 Route::post('/schedule/check', [BookingController::class, 'checkAvailability']);
 Route::get('/schedule/calendar', [BookingController::class, 'calendar']);
+
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('/public/bookings/{booking}/status', [PublicBookingController::class, 'status']);
+    Route::post('/public/bookings/{booking}/transactions/snap', [PublicBookingController::class, 'createSnap']);
+});
 
 /*
 |--------------------------------------------------------------------------

@@ -18,7 +18,7 @@ class CreateSnapTransaction
         private RecordActivity $recordActivity,
     ) {}
 
-    public function handle(Booking $booking, User $actor): Transaction
+    public function handle(Booking $booking, ?User $actor): Transaction
     {
         return DB::transaction(function () use ($booking, $actor): Transaction {
             $booking = Booking::query()->with('bookingServices.service')->lockForUpdate()->findOrFail($booking->id);
@@ -27,6 +27,15 @@ class CreateSnapTransaction
                 throw ValidationException::withMessages([
                     'booking' => 'Snap cannot be created for a terminal booking.',
                 ]);
+            }
+
+            $existingTransaction = $booking->transactions()
+                ->where('transaction_status', 'pending')
+                ->latest()
+                ->first();
+
+            if ($existingTransaction) {
+                return $existingTransaction;
             }
 
             $grossAmount = (int) round($booking->bookingServices->sum(fn ($bs) => (float) $bs->service->price * $bs->qty));
@@ -41,7 +50,7 @@ class CreateSnapTransaction
 
             $transaction = Transaction::create([
                 'booking_id' => $booking->id,
-                'user_id' => $actor->id,
+                'user_id' => $actor?->id,
                 'order_id' => $orderId,
                 'gross_amount' => $grossAmount,
                 'type' => 'dp',

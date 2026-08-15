@@ -10,9 +10,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
-
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Facades\Hash;
 
 #[Fillable([
     'user_id',
@@ -29,6 +28,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
     'ends_at',
     'status',
     'notes',
+    'payment_access_token_hash',
+    'payment_access_token_expires_at',
 ])]
 class Booking extends Model
 {
@@ -76,6 +77,7 @@ class Booking extends Model
             'ends_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
+            'payment_access_token_expires_at' => 'datetime',
         ];
     }
 
@@ -127,5 +129,11 @@ class Booking extends Model
     public function isCancelled(): bool
     {
         return $this->status === 'cancelled';
+    }
+
+    public function hasValidPublicPaymentToken(string $token): bool
+    {
+        return $this->payment_access_token_expires_at?->isFuture() === true
+            && Hash::check($token, $this->payment_access_token_hash ?? '');
     }
 }

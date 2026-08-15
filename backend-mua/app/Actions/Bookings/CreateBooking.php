@@ -6,14 +6,17 @@ use App\Actions\ActivityLogs\RecordActivity;
 use App\Models\Booking;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class CreateBooking
 {
     public function __construct(private RecordActivity $recordActivity) {}
 
-    public function handle(array $data): Booking
+    /** @return array{booking: Booking, payment_access_token: string} */
+    public function handle(array $data): array
     {
-        return DB::transaction(function () use ($data): Booking {
+        return DB::transaction(function () use ($data): array {
             $services = $data['services'];
             unset($data['services']);
 
@@ -24,6 +27,9 @@ class CreateBooking
             $data['starts_at'] = null;
             $data['ends_at'] = $data['client_requested_ends_at'];
             $data['status'] = 'pending';
+            $paymentAccessToken = Str::random(64);
+            $data['payment_access_token_hash'] = Hash::make($paymentAccessToken);
+            $data['payment_access_token_expires_at'] = now()->addDays(30);
 
             $booking = Booking::create($data);
 
@@ -41,7 +47,10 @@ class CreateBooking
                 booking: $booking,
             );
 
-            return $booking;
+            return [
+                'booking' => $booking,
+                'payment_access_token' => $paymentAccessToken,
+            ];
         });
     }
 }

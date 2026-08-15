@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, CaretDownIcon, WarningIcon } from '@phosphor-icons/react'
-import { createBooking, listServices } from '../../api/bookingApi'
+import { createBooking, createPublicSnapTransaction, getPublicBookingStatus, listServices, loadMidtransSnap } from '../../api/bookingApi'
 import AnalogTimePicker from '../../components/AnalogTimePicker'
 import BookingCalendar from '../../components/BookingCalendar'
 
@@ -38,6 +38,16 @@ export default function BookingPage() {
   const [calendarAvailability, setCalendarAvailability] = useState({ busyRanges: [], loading: true, error: '' })
   const [errors, setErrors] = useState({})
   const [submitState, setSubmitState] = useState({ status: 'idle', message: '' })
+  const [publicSession, setPublicSession] = useState(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('public_booking_session') ?? 'null')
+    } catch {
+      return null
+    }
+  })
+  const [publicBooking, setPublicBooking] = useState(null)
+  const [publicError, setPublicError] = useState('')
+  const [paymentLoading, setPaymentLoading] = useState(false)
   const [navigationLoading, setNavigationLoading] = useState(false)
   const [servicesLoading, setServicesLoading] = useState(true)
   const [servicesError, setServicesError] = useState('')
@@ -196,7 +206,7 @@ export default function BookingPage() {
 
     setSubmitState({ status: 'loading', message: 'Mengirim pengajuan booking...' })
     try {
-      await createBooking({
+      const created = await createBooking({
         services: form.serviceItems.map((item) => ({ id: item.id, qty: item.qty })),
         client_name: form.name,
         client_phone: form.phone,
@@ -206,6 +216,13 @@ export default function BookingPage() {
         client_requested_end_time: form.endTime,
         notes: form.notes || undefined,
       })
+      const booking = created?.data ?? created
+      const token = booking?.payment_access_token
+      if (!booking?.id || !token) throw new Error('Booking berhasil dibuat, tetapi akses pelacakan tidak tersedia.')
+      const session = { bookingId: booking.id, token }
+      window.localStorage.setItem('public_booking_session', JSON.stringify(session))
+      setPublicSession(session)
+      setPublicBooking(booking)
       setSubmitState({ status: 'success', message: 'Pengajuan booking berhasil dikirim.' })
       window.dispatchEvent(new CustomEvent('booking_submit_success'))
     } catch (error) {
@@ -233,6 +250,10 @@ export default function BookingPage() {
   }
 
   const resetBooking = () => {
+    window.localStorage.removeItem('public_booking_session')
+    setPublicSession(null)
+    setPublicBooking(null)
+    setPublicError('')
     setForm(emptyForm)
     setStep(1)
     setErrors({})
@@ -240,29 +261,73 @@ export default function BookingPage() {
     setSubmitState({ status: 'idle', message: '' })
   }
 
-  if (submitState.status === 'success') {
+  useEffect(() => {
+    if (publicSession) setSubmitState((current) => current.status === 'success' ? current : { status: 'success', message: 'Pengajuan booking berhasil dikirim.' })
+  }, [publicSession])
+
+  useEffect(() => {
+    if (!publicSession) return undefined
+    let active = true
+    let interval
+    const refresh = async () => {
+      try {
+        const payload = await getPublicBookingStatus(publicSession.bookingId, publicSession.token)
+        if (active) {
+          const nextBooking = payload?.data ?? payload
+          setPublicBooking(nextBooking)
+          setPublicError('')
+          if (['cancelled', 'done'].includes(nextBooking?.status) || ['capture', 'settlement'].includes(nextBooking?.payment?.transaction_status)) window.clearInterval(interval)
+        }
+      } catch (error) {
+        if (!active) return
+        if (error.status === 401) {
+          window.localStorage.removeItem('public_booking_session')
+          setPublicSession(null)
+          setPublicBooking(null)
+        }
+        setPublicError(error.message)
+      }
+    }
+    refresh()
+    interval = window.setInterval(refresh, 10000)
+    return () => { active = false; window.clearInterval(interval) }
+  }, [publicSession])
+
+  const startPayment = async () => {
+    if (!publicSession || !publicBooking?.starts_at || !publicBooking?.ends_at) return
+    setPaymentLoading(true)
+    setPublicError('')
+    try {
+      const payload = await createPublicSnapTransaction(publicSession.bookingId, publicSession.token)
+      const transaction = payload?.data ?? payload
+      if (transaction.snap_token) {
+        const snap = await loadMidtransSnap()
+        snap.pay(transaction.snap_token)
+      } else if (transaction.redirect_url) {
+        window.location.assign(transaction.redirect_url)
+      } else {
+        throw new Error('Tautan pembayaran belum tersedia.')
+      }
+    } catch (error) {
+      setPublicError(error.message)
+    } finally {
+      setPaymentLoading(false)
+    }
+  }
+
+  if (submitState.status === 'success' && publicSession) {
+    const scheduled = Boolean(publicBooking?.starts_at && publicBooking?.ends_at)
+    const paid = ['capture', 'settlement'].includes(publicBooking?.payment?.transaction_status) && publicBooking?.payment?.paid_at
     return (
-      <main className="success-page">
-        <div className="success-card">
-          <span className="eyebrow">Pengajuan terkirim</span>
-          <div className="success-mark" aria-hidden="true">
-            <svg className="success-check" viewBox="0 0 32 32" fill="none">
-              <path d="M7 16.5 13 22 25 10" pathLength="1" />
-            </svg>
-          </div>
-          <h1>Pengajuan booking berhasil dikirim.</h1>
-          <p>{submitState.message} Tim kami akan meninjau tanggal, lokasi, dan kebutuhan layananmu sebelum mengonfirmasi jadwal.</p>
-          <div className="next-card">
-            <strong>Selanjutnya</strong>
-            <ol>
-              <li>Tim kami mengecek ketersediaan jadwal dan lokasi.</li>
-              <li>Jadwal mulai akan dikonfirmasi setelah peninjauan selesai.</li>
-              <li>Staff atau tim kami akan menghubungimu melalui WhatsApp.</li>
-            </ol>
-          </div>
-          <button className="button button-secondary" onClick={resetBooking}>Ajukan booking lain</button>
-        </div>
-      </main>
+      <main className="success-page"><div className="success-card">
+        <span className="eyebrow">Pengajuan terkirim</span><div className="success-mark" aria-hidden="true"><svg className="success-check" viewBox="0 0 32 32" fill="none"><path d="M7 16.5 13 22 25 10" pathLength="1" /></svg></div>
+        <h1>{paid ? 'Pembayaran berhasil.' : scheduled ? 'Jadwal sudah tersedia.' : 'Menunggu konfirmasi jadwal.'}</h1>
+        <p>{paid ? 'Pembayaran sedang tercatat di sistem.' : 'Simpan ID booking ini. Status akan diperbarui otomatis setelah tim menetapkan jadwal.'}</p>
+        <div className="public-booking-status"><span className="detail-label">Booking ID</span><strong>{publicSession.bookingId}</strong><span className="detail-label">Status</span><strong>{publicBooking?.status ?? 'pending'}</strong>{scheduled && <><span className="detail-label">Jadwal mulai</span><strong>{new Date(publicBooking.starts_at).toLocaleString('id-ID')}</strong></>}</div>
+        {publicError && <div className="login-error" role="alert">{publicError}</div>}
+        {!paid && <button className="button button-primary" disabled={!scheduled || paymentLoading} onClick={startPayment}>{paymentLoading ? 'Menyiapkan pembayaran...' : scheduled ? 'Bayar sekarang' : 'Menunggu jadwal tim'}</button>}
+        <button className="button button-secondary" onClick={resetBooking}>Ajukan booking lain</button>
+      </div></main>
     )
   }
 

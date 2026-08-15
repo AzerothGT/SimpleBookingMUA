@@ -94,11 +94,17 @@ class BookingController extends Controller
         StoreBookingRequest $request,
         CreateBooking $createBooking,
     ): JsonResponse {
-        $booking = $createBooking->handle($request->validated());
+        $result = $createBooking->handle($request->validated());
+        $booking = $result['booking'];
 
-        return BookingResource::make($booking->load('bookingServices.service'))
-            ->response()
-            ->setStatusCode(201);
+        $response = BookingResource::make($booking->load('bookingServices.service'))->response();
+        $payload = $response->getData(true);
+        $payload['payment_access_token'] = $result['payment_access_token'];
+
+        return $response
+            ->setData($payload)
+            ->setStatusCode(201)
+            ->header('X-Payment-Access-Token', $result['payment_access_token']);
     }
 
     #[OA\Get(

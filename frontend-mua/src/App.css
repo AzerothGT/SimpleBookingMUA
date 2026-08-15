@@ -246,6 +246,9 @@
   .next-card { @apply my-8 bg-[var(--paper)] p-6 text-left; }
   .next-card strong { @apply text-xs; }
   .next-card ol { @apply mt-3 pl-5 text-xs leading-[2]; color: var(--muted); }
+  .public-booking-status { @apply my-6 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 bg-[var(--paper)] p-5 text-left; }
+  .public-booking-status strong { @apply break-all text-sm; color: var(--ink); }
+  .public-booking-status .detail-label { @apply self-center; }
   .success-card .button { @apply mt-1; }
 }
 
