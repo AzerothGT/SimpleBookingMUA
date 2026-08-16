@@ -1,13 +1,15 @@
 # SimpleBookingMUA
 
-REST API booking Makeup Artist (MUA). Client publik mengusulkan tanggal, jam selesai, dan alamat; owner/admin/staff yang menentukan jam datang aktual, dan menagih pembayaran lewat Midtrans Snap.
+REST API booking Makeup Artist (MUA). Client publik mengusulkan tanggal, jam selesai, dan alamat; owner/admin/staff yang menentukan jam datang aktual dan menagih pembayaran lewat Midtrans Snap.
 
 Backend Laravel 13, MySQL, autentikasi opaque bearer token, dokumentasi OpenAPI otomatis.
 
 ## Fitur
 
 - **Booking publik tanpa akun** — client cukup isi tanggal, jam selesai usulan, alamat, dan service. Tidak boleh menyentuh jam mulai.
-- **Penjadwalan oleh staff** — `starts_at` dan `ends_at` hanya bisa diisi `owner|admin|staff`, dengan proteksi overlap per staff yang aman terhadap race condition (row lock, diuji lewat proses paralel).
+- **Penjadwalan oleh staff** — `starts_at` dan `ends_at` hanya bisa diisi `owner|admin`, dengan proteksi overlap per staff yang aman terhadap race condition (row lock, diuji lewat proses paralel).
+- **Multi-staff per booking** — satu booking bisa menugaskan beberapa staff dengan jam mulai masing-masing dan satu jam selesai bersama, disimpan di `booking_staff_schedules`.
+- **Booking code** — kode publik 8 karakter per booking, dipakai di link pembayaran agar UUID internal tidak terekspos.
 - **State machine booking** — `pending → confirmed → done`, `cancelled` sebagai terminal. Transisi ilegal ditolak `422`.
 - **Katalog service + galeri** — banyak foto per service (upload atau URL eksternal), dijamin tepat satu cover per service di level database.
 - **Quantity per service** — setiap booking bisa pilih multiple service dengan qty (jumlah orang) masing-masing, disimpan di tabel pivot `booking_service`.
@@ -47,7 +49,8 @@ app/
 │   ├── Requests/     Validasi & guard field per-role
 │   └── Resources/    Bentuk response JSON
 ├── Models/           Eloquent, UUID primary key
-│   ├── BookingService  Pivot booking ↔ service dengan qty
+│   ├── BookingService        Pivot booking ↔ service dengan qty
+│   └── BookingStaffSchedule  Penugasan staff + jam mulai per booking
 ├── Policies/         Otorisasi berbasis role
 └── Services/         Adapter integrasi eksternal
 ```
@@ -165,7 +168,7 @@ Token dianggap valid bila belum expired dan user `is_active`. `POST /api/logout`
 | `POST·PATCH·DELETE` | `/api/services[/{service}]` | Kelola service (owner/admin) |
 | `POST·PATCH·DELETE` | `/api/services/{service}/serviceImages[/{image}]` | Kelola foto service |
 | `GET·PATCH·DELETE` | `/api/bookings[/{booking}]` | Kelola booking |
-| `POST` | `/api/bookings/{booking}/assign-staff` | Set staff + `starts_at`/`ends_at` |
+| `POST` | `/api/bookings/{booking}/assign-staff` | Set staff (`staff[{user_id, starts_at}]`) + `ends_at` bersama |
 | `PATCH` | `/api/bookings/{booking}/status` | Ubah status |
 | `GET` | `/api/bookings/{booking}/transactions` | Riwayat pembayaran |
 | `POST` | `/api/bookings/{booking}/transactions/snap` | Buat Snap transaction |
@@ -186,7 +189,7 @@ sequenceDiagram
     A-->>C: rentang jam sibuk
     C->>A: POST /bookings (tanggal, jam selesai, alamat, services[{id, qty}])
     A-->>C: booking pending, starts_at null
-    S->>A: POST /bookings/{id}/assign-staff (starts_at, ends_at)
+    S->>A: POST /bookings/{id}/assign-staff (staff[{user_id, starts_at}], ends_at)
     A-->>S: overlap dicek, jadwal terset
     S->>A: POST /bookings/{id}/transactions/snap
     A->>M: create Snap transaction
@@ -203,7 +206,8 @@ sequenceDiagram
 - **Quantity per service** — booking kirim `services[{id, qty}]` bukan `service_id`. Gross amount Snap = `sum(qty × price)`.
 - `client_requested_date`, `client_requested_end_time`, `client_requested_ends_at` **immutable** setelah create — jejak usulan client.
 - `starts_at` hanya bisa diisi role internal. API publik menolak dengan `422`, bukan diam-diam membuang field.
-- Satu staff tidak bisa double-book. Cek overlap berjalan di dalam transaksi dengan row lock.
+- Satu staff tidak bisa double-book. Cek overlap berjalan di dalam transaksi dengan row lock, dievaluasi per staff sehingga dua staff boleh bekerja di jam yang sama.
+- Semua staff dalam satu booking memakai `ends_at` yang sama; setiap `starts_at` harus lebih awal dari `ends_at`. Staff duplikat dalam satu request ditolak `422`.
 - `ends_at > starts_at` dijaga CHECK constraint di MySQL.
 - Tepat satu `is_cover` per service — trigger MySQL (partial unique index di SQLite).
 - Service dengan booking aktif tidak bisa dinonaktifkan.
@@ -234,7 +238,7 @@ vendor/bin/pint --test
 
 ## Status
 
-125 test lulus, 627 assertion (7 skipped — MySQL-only schema tests).
+137 test lulus, 691 assertion (7 skipped — MySQL-only schema tests).
 
 Belum ada: frontend, refund flow, notifikasi WhatsApp/email, ownership scoping booking per staff (setiap user aktif saat ini bisa mengubah booking mana pun).
 

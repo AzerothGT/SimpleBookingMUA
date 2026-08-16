@@ -42,9 +42,22 @@ it('returns only safe booking status with a valid token', function () {
 
     $this->getJson("/api/public/bookings/{$booking->id}/status?token={$token}")
         ->assertSuccessful()
-        ->assertJsonPath('id', $booking->id)
+        ->assertJsonPath('id', $booking->booking_code)
+        ->assertJsonPath('id', fn ($value) => is_string($value) && strlen($value) === 8)
         ->assertJsonMissingPath('client_phone')
         ->assertJsonMissingPath('activity_logs');
+});
+
+it('resolves a public booking by uuid or booking code', function () {
+    [$booking, $token] = publicPaymentBooking();
+
+    foreach ([$booking->id, $booking->booking_code] as $key) {
+        $this->getJson("/api/public/bookings/{$key}/status?token={$token}")
+            ->assertSuccessful()
+            ->assertJsonPath('id', $booking->booking_code);
+    }
+
+    $this->getJson("/api/public/bookings/NOTFOUND/status?token={$token}")->assertNotFound();
 });
 
 it('rejects invalid and expired public tokens', function () {

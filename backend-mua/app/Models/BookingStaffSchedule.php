@@ -10,25 +10,32 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'booking_id',
-    'service_id',
-    'qty',
+    'user_id',
+    'starts_at',
+    'ends_at',
 ])]
-class BookingService extends Model
+class BookingStaffSchedule extends Model
 {
     use HasFactory;
     use HasUuids;
-
-    protected $table = 'booking_service';
-
-    public const UPDATED_AT = null;
 
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
     }
 
-    public function service(): BelongsTo
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Service::class);
+        return $this->belongsTo(User::class);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
     }
 }

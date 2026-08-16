@@ -18,8 +18,7 @@ it('serializes concurrent schedule assignments for the same staff', function () 
     $bookingIds = $bookings->pluck('id')->all();
     $serviceIds = DB::table('booking_service')->whereIn('booking_id', $bookingIds)->pluck('service_id')->all();
     $payload = [
-        'user_id' => $staff->id,
-        'starts_at' => '2026-08-10 12:00:00',
+        'staff' => [['user_id' => $staff->id, 'starts_at' => '2026-08-10 12:00:00']],
         'ends_at' => '2026-08-10 15:00:00',
     ];
 

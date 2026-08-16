@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Booking;
+use App\Models\Service;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -41,9 +42,17 @@ class BookingFactory extends Factory
     {
         return $this->afterCreating(function (Booking $booking) {
             $booking->bookingServices()->create([
-                'service_id' => \App\Models\Service::factory()->create()->id,
+                'service_id' => Service::factory()->create()->id,
                 'qty' => 1,
             ]);
+
+            if ($booking->user_id && $booking->starts_at && $booking->ends_at) {
+                $booking->staffSchedules()->create([
+                    'user_id' => $booking->user_id,
+                    'starts_at' => $booking->starts_at,
+                    'ends_at' => $booking->ends_at,
+                ]);
+            }
         });
     }
 

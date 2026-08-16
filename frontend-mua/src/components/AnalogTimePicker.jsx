@@ -26,13 +26,19 @@ export default function AnalogTimePicker({ value, onChange, onComplete }) {
       if (meridiem === 'PM') h += 12
       commit(h, minutes)
       setMode('minute')
-    } else {
-      commit(hours24, (n * 5) % 60)
-      onComplete?.()
+      return
     }
+
+    commit(hours24, (n * 5) % 60)
+    setMode('meridiem')
   }
 
-  const toggleMeridiem = () => commit((hours24 + 12) % 24, minutes)
+  const pickMeridiem = (nextMeridiem) => {
+    let h = displayHour % 12
+    if (nextMeridiem === 'PM') h += 12
+    commit(h, minutes)
+    onComplete?.()
+  }
 
   const handAngle =
     mode === 'hour'
@@ -49,9 +55,9 @@ export default function AnalogTimePicker({ value, onChange, onComplete }) {
         <button type="button" className={`atp-unit ${mode === 'minute' ? 'active' : ''}`} onClick={() => setMode('minute')}>
           {parsed ? String(minutes).padStart(2, '0') : '--'}
         </button>
-        <button type="button" className={`atp-meridiem ${parsed ? 'active' : ''}`} onClick={toggleMeridiem}>{meridiem}</button>
+        <button type="button" className={`atp-meridiem ${mode === 'meridiem' ? 'active' : ''}`} onClick={() => setMode('meridiem')}>{meridiem}</button>
       </div>
-      <div className="atp-clock">
+      {mode !== 'meridiem' ? <div className="atp-clock">
         <div className="atp-face">
           {NUMBERS.map((n) => {
             const angle = (n * 30 - 90) * (Math.PI / 180)
@@ -73,7 +79,21 @@ export default function AnalogTimePicker({ value, onChange, onComplete }) {
           <div className="atp-hand" style={{ transform: `rotate(${handAngle}deg)` }} />
           <div className="atp-pin" />
         </div>
-      </div>
+      </div> : <div className="atp-meridiem-options" aria-label="Pilih AM atau PM">
+        <span className="atp-hint">Pilih waktu</span>
+        <div>
+          {['AM', 'PM'].map((option) => (
+            <button
+              type="button"
+              key={option}
+              className={`atp-meridiem-choice ${meridiem === option ? 'selected' : ''}`}
+              onClick={() => pickMeridiem(option)}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>}
     </div>
   )
 }

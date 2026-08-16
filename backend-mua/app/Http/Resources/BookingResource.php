@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\Booking;
 use App\Models\BookingService;
+use App\Models\BookingStaffSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,6 +16,7 @@ class BookingResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'booking_code' => $this->booking_code,
             'user_id' => $this->user_id,
             'client_name' => $this->client_name,
             'client_phone' => $this->client_phone,
@@ -41,6 +43,13 @@ class BookingResource extends JsonResource
                 ]);
             }),
             'staff' => UserResource::make($this->whenLoaded('user')),
+            'staff_schedules' => $this->whenLoaded('staffSchedules', fn () => $this->staffSchedules->map(fn (BookingStaffSchedule $schedule) => [
+                'id' => $schedule->id,
+                'user_id' => $schedule->user_id,
+                'staff' => UserResource::make($schedule->user),
+                'starts_at' => $schedule->starts_at,
+                'ends_at' => $schedule->ends_at,
+            ])),
             'transactions' => TransactionResource::collection($this->whenLoaded('transactions')),
             'activity_logs' => ActivityLogResource::collection($this->whenLoaded('activityLogs')),
         ];

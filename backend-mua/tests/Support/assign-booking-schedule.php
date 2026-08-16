@@ -16,8 +16,7 @@ try {
         Booking::findOrFail($argv[1]),
         User::findOrFail($argv[2]),
         [
-            'user_id' => $argv[3],
-            'starts_at' => $argv[4],
+            'staff' => [['user_id' => $argv[3], 'starts_at' => $argv[4]]],
             'ends_at' => $argv[5],
         ],
     );

@@ -12,16 +12,18 @@ class AssignStaffRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => [
+            'staff' => ['required', 'array', 'min:1'],
+            'staff.*.user_id' => [
                 'required',
+                'distinct',
                 Rule::exists(User::class, 'id')->where(
                     fn (Builder $query) => $query
                         ->where('is_active', true)
                         ->whereIn('role', ['owner', 'admin', 'staff']),
                 ),
             ],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['required', 'date', 'after:starts_at'],
+            'staff.*.starts_at' => ['required', 'date'],
+            'ends_at' => ['required', 'date'],
         ];
     }
 }

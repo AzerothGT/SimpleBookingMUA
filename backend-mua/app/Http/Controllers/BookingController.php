@@ -14,6 +14,7 @@ use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingRequest;
 use App\Http\Resources\BookingResource;
 use App\Models\Booking;
+use App\Models\BookingStaffSchedule;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class BookingController extends Controller
         Gate::authorize('viewAny', Booking::class);
 
         $bookings = Booking::query()
-            ->with(['user', 'bookingServices.service', 'transactions'])
+            ->with(['user', 'staffSchedules.user', 'bookingServices.service', 'transactions'])
             ->when($request->status, fn ($q, $status) => $q->where('status', $status))
             ->when($request->client_name, fn ($q, $name) => $q->where('client_name', 'like', "%{$name}%"))
             ->when($request->client_phone, fn ($q, $phone) => $q->where('client_phone', $phone))
@@ -128,6 +129,7 @@ class BookingController extends Controller
 
         return BookingResource::make($booking->load([
             'user',
+            'staffSchedules.user',
             'bookingServices.service',
             'transactions',
             'activityLogs.user',
@@ -145,7 +147,7 @@ class BookingController extends Controller
         ]);
 
         return response()->json([
-            'booking_id' => $booking->id,
+            'booking_id' => $booking->booking_code ?? $booking->id,
             'payment_access_token' => $token,
         ]);
     }
@@ -246,11 +248,22 @@ class BookingController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['user_id', 'starts_at', 'ends_at'],
+                required: ['staff', 'ends_at'],
                 properties: [
-                    new OA\Property(property: 'user_id', type: 'string', format: 'uuid', description: 'Staff ID to assign'),
-                    new OA\Property(property: 'starts_at', type: 'string', format: 'date-time', description: 'Jam mulai'),
-                    new OA\Property(property: 'ends_at', type: 'string', format: 'date-time', description: 'Jam selesai'),
+                    new OA\Property(
+                        property: 'staff',
+                        type: 'array',
+                        minItems: 1,
+                        items: new OA\Items(
+                            required: ['user_id', 'starts_at'],
+                            properties: [
+                                new OA\Property(property: 'user_id', type: 'string', format: 'uuid', description: 'Staff ID to assign'),
+                                new OA\Property(property: 'starts_at', type: 'string', format: 'date-time', description: 'Jam mulai staff'),
+                            ],
+                            type: 'object',
+                        ),
+                    ),
+                    new OA\Property(property: 'ends_at', type: 'string', format: 'date-time', description: 'Jam selesai bersama'),
                 ]
             )
         ),
@@ -273,7 +286,7 @@ class BookingController extends Controller
             $request->validated(),
         );
 
-        return BookingResource::make($booking->load(['user', 'bookingServices.service']));
+        return BookingResource::make($booking->load(['user', 'staffSchedules.user', 'bookingServices.service']));
     }
 
     #[OA\Get(
@@ -294,19 +307,19 @@ class BookingController extends Controller
         $rangeStart = $request->date('from')->startOfDay();
         $rangeEnd = $request->date('to')->endOfDay();
 
-        $bookings = $this->confirmedPaidSchedules()
+        $schedules = $this->confirmedPaidSchedules()
             ->where('starts_at', '<=', $rangeEnd)
             ->where('ends_at', '>=', $rangeStart)
             ->orderBy('starts_at')
             ->get(['starts_at', 'ends_at']);
 
-        $data = $bookings
-            ->groupBy(fn (Booking $booking) => $booking->starts_at->toDateString())
+        $data = $schedules
+            ->groupBy(fn (BookingStaffSchedule $schedule) => $schedule->starts_at->toDateString())
             ->map(fn ($ranges, string $date) => [
                 'date' => $date,
-                'busy_ranges' => $ranges->map(fn (Booking $booking) => [
-                    'starts_at' => $booking->starts_at,
-                    'ends_at' => $booking->ends_at,
+                'busy_ranges' => $ranges->map(fn (BookingStaffSchedule $schedule) => [
+                    'starts_at' => $schedule->starts_at,
+                    'ends_at' => $schedule->ends_at,
                 ])->values(),
             ])
             ->values();
@@ -342,13 +355,12 @@ class BookingController extends Controller
 
     private function confirmedPaidSchedules(): Builder
     {
-        return Booking::query()
-            ->where('status', 'confirmed')
-            ->whereNotNull('starts_at')
-            ->whereNotNull('ends_at')
-            ->whereHas('transactions', fn (Builder $query) => $query
-                ->whereIn('transaction_status', ['capture', 'settlement'])
-                ->where('fraud_status', 'accept')
-                ->whereNotNull('paid_at'));
+        return BookingStaffSchedule::query()
+            ->whereHas('booking', fn (Builder $query) => $query
+                ->where('status', 'confirmed')
+                ->whereHas('transactions', fn (Builder $transactionQuery) => $transactionQuery
+                    ->whereIn('transaction_status', ['capture', 'settlement'])
+                    ->where('fraud_status', 'accept')
+                    ->whereNotNull('paid_at')));
     }
 }

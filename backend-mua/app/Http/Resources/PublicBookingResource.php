@@ -26,7 +26,7 @@ class PublicBookingResource extends JsonResource
         $totalAmount = (int) round($services->sum(fn (array $service): float => $service['subtotal']));
 
         return [
-            'id' => $this->id,
+            'id' => $this->booking_code ?? $this->id,
             'status' => $this->status,
             'client_requested_date' => $this->client_requested_date?->toDateString(),
             'client_requested_end_time' => $this->client_requested_end_time,

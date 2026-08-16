@@ -8,6 +8,8 @@ erDiagram
     users ||--o{ activity_logs : performs
     services ||--o{ booking_service : has
     bookings ||--o{ booking_service : has
+    bookings ||--o{ booking_staff_schedules : assigns
+    users ||--o{ booking_staff_schedules : works
     services ||--o{ service_images : has
     bookings ||--o{ transactions : has
     bookings ||--o{ activity_logs : about
@@ -57,7 +59,8 @@ erDiagram
 
     bookings {
         uuid id PK
-        uuid user_id FK "staff handle, nullable saat request client"
+        uuid user_id FK "staff pertama, mirror dari booking_staff_schedules"
+        varchar booking_code UK "kode publik 8 char"
         varchar client_name
         varchar client_phone
         text client_address "alamat lokasi makeup"
@@ -81,6 +84,16 @@ erDiagram
         uuid service_id FK
         int qty "jumlah orang"
         timestamp created_at
+    }
+
+    booking_staff_schedules {
+        uuid id PK
+        uuid booking_id FK
+        uuid user_id FK
+        timestamp starts_at "jam mulai per staff"
+        timestamp ends_at "jam selesai bersama"
+        timestamp created_at
+        timestamp updated_at
     }
 
     transactions {
@@ -123,6 +136,8 @@ erDiagram
 | `users` | `bookings` | 1—N | staff handle booking |
 | `services` | `booking_service` | 1—N | jasa yg dipesan (via pivot) |
 | `bookings` | `booking_service` | 1—N | layanan + qty per booking |
+| `bookings` | `booking_staff_schedules` | 1—N | staff yang ditugaskan + jam mulai masing-masing |
+| `users` | `booking_staff_schedules` | 1—N | jadwal kerja per staff |
 | `services` | `service_images` | 1—N | foto jasa (upload atau link) |
 | `bookings` | `transactions` | 1—N | bayar Snap per booking |
 | `users` | `transactions` | 1—N | yang create Snap |
@@ -239,6 +254,8 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 | `service_images.service_id` | `services` | CASCADE |
 | `booking_service.booking_id` | `bookings` | CASCADE |
 | `booking_service.service_id` | `services` | RESTRICT |
+| `booking_staff_schedules.booking_id` | `bookings` | CASCADE |
+| `booking_staff_schedules.user_id` | `users` | RESTRICT |
 | `transactions.booking_id` | `bookings` | RESTRICT |
 | `transactions.user_id` | `users` | RESTRICT |
 | `activity_logs.user_id` | `users` | RESTRICT |
@@ -250,10 +267,14 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 | `order_id` unik | UNIQUE |
 | `qty > 0` per booking_service | app guard (`integer, min:1`) |
 | Pair unik `(booking_id, service_id)` di pivot | UNIQUE |
-| Satu staff tidak double-book | cek overlap saat staff set `starts_at`/`ends_at` |
+| Pair unik `(booking_id, user_id)` di `booking_staff_schedules` | UNIQUE + `distinct` di request |
+| Satu staff tidak double-book | cek overlap per staff di `booking_staff_schedules` saat assign, row lock dalam transaksi |
+| Semua staff satu booking pakai `ends_at` sama | app guard di `AssignBookingSchedule` |
+| `booking_code` unik | UNIQUE + retry loop saat generate |
 | `ends_at > starts_at` saat `starts_at` terisi | CHECK |
+| `ends_at > starts_at` di `booking_staff_schedules` | CHECK (MySQL) + app guard |
 | Usulan client (`date`/`end_time`/`ends_at`) immutable setelah create | app guard |
-| `starts_at` hanya owner/admin/staff | app guard |
+| `starts_at` hanya owner/admin | app guard |
 | Client tidak write `starts_at` | API publik reject |
 | Edit jadwal staff | log `booking.schedule_adjusted` |
 | `gross_amount > 0` | CHECK |

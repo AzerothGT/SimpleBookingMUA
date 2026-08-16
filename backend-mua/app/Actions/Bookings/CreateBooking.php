@@ -27,6 +27,10 @@ class CreateBooking
             $data['starts_at'] = null;
             $data['ends_at'] = $data['client_requested_ends_at'];
             $data['status'] = 'pending';
+            do {
+                $bookingCode = Str::upper(Str::random(8));
+            } while (Booking::query()->where('booking_code', $bookingCode)->exists());
+            $data['booking_code'] = $bookingCode;
             $paymentAccessToken = Str::random(64);
             $data['payment_access_token_hash'] = Hash::make($paymentAccessToken);
             $data['payment_access_token_expires_at'] = now()->addDays(30);

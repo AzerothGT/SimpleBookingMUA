@@ -143,7 +143,7 @@
   .picker-trigger:focus-visible { @apply outline-0 ring-4 ring-[rgba(47,83,69,.1)]; border-color: var(--green); }
   .picker-trigger.disabled { cursor: not-allowed; opacity: .55; }
   .picker-trigger strong { @apply font-display text-[1.35rem] font-normal leading-[1.2]; color: var(--ink); }
-  .picker-modal-backdrop { @apply fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(20,31,26,.42)] p-4; }
+  .picker-modal-backdrop { @apply fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(20,31,26,.42)] p-4; }
   .picker-modal { @apply relative max-h-[calc(100svh-2rem)] max-w-full overflow-y-auto border bg-[var(--surface)] p-5 shadow-[0_24px_70px_rgba(20,31,26,.24)]; border-color: var(--line); }
   .picker-modal-header { @apply mb-4 flex items-center justify-between gap-5; }
   .picker-modal-header .step-kicker { font-size: .6875rem; }
@@ -183,6 +183,10 @@
   .atp-meridiem { @apply ml-2 cursor-pointer border px-2.5 py-1.5 text-[.75rem] font-bold uppercase leading-none transition; border-color: var(--line); border-radius: 6px; color: var(--muted); }
   .atp-meridiem:hover { border-color: var(--green); color: var(--ink); }
   .atp-meridiem.active { background: var(--green); border-color: var(--green); color: #fff; }
+  .atp-meridiem-options { @apply flex min-h-[220px] flex-col items-center justify-center gap-4; }
+  .atp-meridiem-options > div { @apply flex gap-3; }
+  .atp-meridiem-choice { @apply min-w-[86px] cursor-pointer border bg-[var(--paper)] px-5 py-3 font-mono text-sm font-bold transition; border-color: var(--line); color: var(--ink); }
+  .atp-meridiem-choice:hover, .atp-meridiem-choice.selected { border-color: var(--green); background: var(--green); color: #fff; }
   .atp-clock { @apply mt-1; }
   .atp-face { position: relative; width: 220px; height: 220px; margin: 0 auto; border-radius: 50%; border: 1px solid var(--line); background: var(--paper); }
   .atp-num { position: absolute; width: 38px; height: 38px; @apply flex items-center justify-center border-0 rounded-full bg-transparent font-mono text-xs font-semibold; color: var(--ink); cursor: pointer; transform: translate(-50%, -50%); transition: background .15s, color .15s; z-index: 2; touch-action: manipulation; }
@@ -195,10 +199,10 @@
   .notice span { @apply font-mono; color: var(--orange); }
   .notice p { @apply m-0 text-xs leading-[1.6]; color: var(--muted); }
   .review-list { @apply bg-[var(--paper)]; }
-  .review-row { @apply flex items-center justify-between gap-5 border-b px-4 py-3.5; border-color: var(--line); }
+  .review-row { @apply flex items-start justify-between gap-5 border-b px-4 py-3.5; border-color: var(--line); }
   .review-row:last-child { @apply border-b-0; }
-  .review-row span { @apply font-mono text-[.625rem] uppercase; color: var(--muted); }
-  .review-row strong { @apply max-w-[65%] overflow-hidden text-right text-xs font-bold; color: var(--ink); text-overflow: ellipsis; white-space: nowrap; }
+  .review-row span { @apply shrink-0 font-mono text-[.625rem] uppercase; color: var(--muted); }
+  .review-row strong { @apply min-w-0 max-w-[72%] text-right text-xs font-bold leading-[1.5]; color: var(--ink); overflow-wrap: anywhere; }
   .review-intro { @apply mb-4 text-[13px] leading-[1.7]; color: var(--muted); }
   .review-trust { @apply mt-4 text-[.6875rem] leading-[1.6]; color: var(--muted); }
   .review-trust strong { @apply font-bold; color: var(--ink); }
@@ -329,7 +333,9 @@
 
 @media (min-width: 761px) {
   .booking-page { @apply flex h-[100svh] flex-col overflow-hidden; }
-  .booking-page .booking-shell { @apply w-full min-h-0 flex-1 overflow-y-auto; }
+  .booking-page .booking-shell { @apply flex w-full min-h-0 flex-1 flex-col overflow-hidden; }
+  .booking-page .booking-grid { @apply min-h-0 flex-1 overflow-y-auto; padding-bottom: 6rem; scroll-padding-bottom: 6rem; scrollbar-gutter: stable; }
+  .booking-page .form-panel > fieldset { padding-bottom: 3.75rem; }
   .booking-page .site-footer { @apply hidden; }
 
   .cart-summary { display: none; }
@@ -546,6 +552,8 @@
 .admin-button-danger { background: #9b4640; color: #fff; }
 .admin-table-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
 .admin-table { width: 100%; border-collapse: collapse; font-size: .7rem; }
+.booking-code-cell { font-family: var(--font-mono); font-size: .6875rem; font-weight: 500; letter-spacing: .05em; color: var(--green); white-space: nowrap; }
+.booking-services-cell { display: block; width: min(100%, 14rem); white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
 .admin-table th { padding: .85rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); font: .6rem var(--font-mono); letter-spacing: .04em; text-align: left; text-transform: uppercase; }
 .admin-table td { padding: 1rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .admin-table tr:last-child td { border-bottom: 0; }
@@ -564,6 +572,10 @@
 .detail-summary, .detail-block { display: grid; gap: .35rem; padding-bottom: 1rem; border-bottom: 1px solid var(--line); }
 .detail-service-row { display: flex; align-items: center; gap: .5rem; }
 .detail-service-row > span { flex: 1; }
+.staff-schedule-list { display: grid; gap: .75rem; }
+.staff-schedule-row { display: grid; grid-template-columns: minmax(0, 1fr) 7rem auto; align-items: end; gap: .5rem; }
+.staff-schedule-row .admin-field { margin: 0; }
+.staff-schedule-remove { min-height: 2.6rem; padding: .5rem; }
 .detail-summary strong { color: var(--ink); font-size: 1.15rem; }
 .detail-summary span:not(.eyebrow), .detail-block p { margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.6; }
 .detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
@@ -649,6 +661,7 @@
   .booking-toolbar { align-items: stretch; flex-direction: column; }
   .admin-filters { grid-template-columns: 1fr; }
   .admin-drawer { width: 100%; }
+  .staff-schedule-row { grid-template-columns: minmax(0, 1fr) 6rem auto; }
   .detail-grid { grid-template-columns: 1fr; }
   .dashboard-filter select { width: 100%; }
   .agenda-item { grid-template-columns: 5.5rem minmax(0, 1fr) auto; gap: .65rem; }
