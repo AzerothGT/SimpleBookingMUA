@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('activity_logs', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('user_id')->nullable()->index();
-            $table->string('entity_type')->index(); // booking|transaction|service|user|task
+            $table->string('entity_type')->index(); // booking|transaction|service|user
             $table->uuid('entity_id')->nullable();
             $table->uuid('booking_id')->nullable()->index();
             $table->string('action');

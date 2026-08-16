@@ -51,7 +51,6 @@
 - Jadwal tabrak → double-booking.
 - Client bebas set jam mulai → seharusnya MUA yang tentukan.
 - Transaksi & status bayar sulit dilacak.
-- Checklist kerja tidak terdokumentasi.
 - Pembayaran manual → human error.
 
 **Tujuan:** Sistem terintegrasi otomatisasi pemesanan → penjadwalan → eksekusi → pembayaran.
@@ -64,7 +63,7 @@
 |---|---|
 | Owner | Pemilik, akses penuh manajemen |
 | Admin | Kelola user & service |
-| Staff (MUA) | Eksekusi booking + checklist kerja |
+| Staff (MUA) | Eksekusi booking |
 | Client (publik) | Pesan tanpa akun |
 
 **Model bisnis:** B2B + B2C.
@@ -106,8 +105,7 @@ flowchart TD
     O --> P{Valid?}
     P -->|Tidak| Q[Tolak]
     P -->|Ya| R[Update status bayar]
-    R --> S[Staff checklist]
-    S --> T[done]
+    R --> T[done]
     T --> U[Audit trail tercatat]
 ```
 
@@ -120,7 +118,7 @@ stateDiagram-v2
     [*] --> pending: Client create booking
     pending --> confirmed: Staff assign + cek overlap
     pending --> cancelled: Cancel
-    confirmed --> done: Checklist selesai
+    confirmed --> done: Pekerjaan selesai
     confirmed --> cancelled: Cancel
     done --> [*]
     cancelled --> [*]

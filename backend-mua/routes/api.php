@@ -3,7 +3,6 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BookingController;
-use App\Http\Controllers\BookingTaskController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceImageController;
@@ -58,11 +57,6 @@ Route::middleware('auth.session')->group(function () {
     Route::post('/bookings/{booking}/payment-link', [BookingController::class, 'paymentLink']);
     Route::post('/bookings/{booking}/assign-staff', [BookingController::class, 'assignStaff']);
     Route::patch('/bookings/{booking}/status', [BookingController::class, 'changeStatus']);
-
-    // Booking Tasks
-    Route::apiResource('bookings.bookingTasks', BookingTaskController::class)
-        ->scoped()
-        ->only(['store', 'update', 'destroy']);
 
     // Transactions
     Route::get('/bookings/{booking}/transactions', [TransactionController::class, 'index'])->scopeBindings();

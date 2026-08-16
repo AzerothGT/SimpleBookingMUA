@@ -2,11 +2,21 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
+    {
+        // Fitur checklist booking dicabut. Log lama memakai alias morph 'task'
+        // yang sudah tidak terdaftar, sehingga resolve entity akan throw.
+        DB::table('activity_logs')->where('entity_type', 'task')->delete();
+
+        Schema::dropIfExists('booking_tasks');
+    }
+
+    public function down(): void
     {
         Schema::create('booking_tasks', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -19,10 +29,5 @@ return new class extends Migration
 
             $table->foreign('booking_id')->references('id')->on('bookings')->onDelete('cascade');
         });
-    }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('booking_tasks');
     }
 };

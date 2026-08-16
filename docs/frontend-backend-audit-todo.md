@@ -4,14 +4,6 @@ Hasil audit implementasi frontend terhadap API backend.
 
 ## Prioritas Tinggi
 
-- [x] **Perbaiki field checklist booking**
-  - Backend `BookingResource` mengirim field `tasks`.
-  - Frontend `BookingsPage.jsx` masih membaca `booking.booking_tasks`.
-  - Ubah pembacaan frontend ke `booking.tasks`.
-  - Verifikasi checklist tampil pada detail booking admin.
-  - Referensi: `backend-mua/app/Http/Resources/BookingResource.php`, `frontend-mua/src/pages/admin/BookingsPage.jsx`.
-  - **Selesai.** Diverifikasi via browser: task "Siapkan kit makeup" tampil di drawer detail booking admin.
-
 - [x] **Amankan idempotensi transaksi publik setelah pembayaran berhasil**
   - `PublicBookingController` hanya menggunakan transaksi existing jika statusnya `pending`.
   - Jika transaksi sudah `capture` atau `settlement`, request Snap berikutnya berpotensi membuat transaksi baru.
@@ -79,9 +71,10 @@ Hasil audit implementasi frontend terhadap API backend.
 - [x] Jalankan frontend lint dan build: oxlint 0 warning/error, `vite build` sukses.
 - [x] Pastikan endpoint frontend sesuai route backend: route `public/bookings/{id}/status` dan `.../transactions/snap` cocok dengan `bookingApi.js`.
 - [x] Uji manual alur publik (via browser): submit booking sukses (4 tahap), booking ID tampil, reload memulihkan status via polling, booking dijadwalkan dari admin → tombol bayar aktif → klik bayar memanggil endpoint snap tanpa 422. Snap sandbox belum bisa dibuka (butuh kredensial + CA bundle, lihat item Midtrans di atas).
-- [x] Uji manual alur admin: akses `/admin` tanpa login → redirect `/login`; login owner & staff → role/nama asli dipakai, nav Aktivitas hanya owner/admin; checklist tampil di detail booking.
+- [x] Uji manual alur admin: akses `/admin` tanpa login → redirect `/login`; login owner & staff → role/nama asli dipakai, nav Aktivitas hanya owner/admin.
 
 ## Catatan Existing
 
 - [x] `BookingSeeder` sudah diperbaiki — `migrate:fresh --seed` kini berjalan (dijamin test `DatabaseSeedingTest`).
 - Folder `.superpowers/` adalah artefak sesi mockup lokal dan tidak termasuk TODO aplikasi. (Catatan: di repo saat ini foldernya `docs/superpowers`.)
+- Fitur checklist booking (`booking_tasks`) sudah dihapus dari aplikasi. Angka test di bagian Validasi di atas adalah catatan historis dari sesi audit tersebut, bukan hitungan suite saat ini.

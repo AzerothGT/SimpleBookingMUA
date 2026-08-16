@@ -9,6 +9,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
@@ -19,8 +20,26 @@ it('uses the ERD table and timestamp definitions', function () {
         ->and(Schema::hasColumn('users', 'updated_at'))->toBeFalse()
         ->and(Schema::hasColumn('services', 'updated_at'))->toBeFalse()
         ->and(Schema::hasColumn('service_images', 'updated_at'))->toBeFalse()
-        ->and(Schema::hasColumn('booking_tasks', 'updated_at'))->toBeFalse()
         ->and(Schema::hasColumn('activity_logs', 'updated_at'))->toBeFalse();
+});
+
+it('drops the withdrawn booking task checklist table', function () {
+    expect(Schema::hasTable('booking_tasks'))->toBeFalse();
+});
+
+it('purges activity logs left behind by the withdrawn checklist feature', function () {
+    DB::table('activity_logs')->insert([
+        'id' => (string) Str::uuid(),
+        'entity_type' => 'task',
+        'entity_id' => (string) Str::uuid(),
+        'action' => 'task.created',
+        'created_at' => now(),
+    ]);
+
+    $migration = require database_path('migrations/2026_08_16_000003_drop_booking_tasks_table.php');
+    $migration->up();
+
+    expect(DB::table('activity_logs')->where('entity_type', 'task')->count())->toBe(0);
 });
 
 it('does not store session payloads in the database', function () {
@@ -71,7 +90,6 @@ it('defines required foreign keys and indexes', function () {
             'bookings.user_id' => 'RESTRICT',
             'booking_service.booking_id' => 'CASCADE',
             'booking_service.service_id' => 'RESTRICT',
-            'booking_tasks.booking_id' => 'CASCADE',
             'transactions.booking_id' => 'RESTRICT',
             'transactions.user_id' => 'RESTRICT',
             'activity_logs.user_id' => 'RESTRICT',

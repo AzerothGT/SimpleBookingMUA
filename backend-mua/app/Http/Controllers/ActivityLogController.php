@@ -17,7 +17,7 @@ class ActivityLogController extends Controller
         tags: ['ActivityLogs'],
         security: [['session' => []]],
         parameters: [
-            new OA\Parameter(name: 'entity_type', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['booking', 'transaction', 'service', 'user', 'task'])),
+            new OA\Parameter(name: 'entity_type', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['booking', 'transaction', 'service', 'user'])),
             new OA\Parameter(name: 'entity_id', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'uuid')),
             new OA\Parameter(name: 'booking_id', in: 'query', required: false, schema: new OA\Schema(type: 'string', format: 'uuid')),
             new OA\Parameter(name: 'action', in: 'query', required: false, schema: new OA\Schema(type: 'string')),

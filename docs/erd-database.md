@@ -9,7 +9,6 @@ erDiagram
     services ||--o{ booking_service : has
     bookings ||--o{ booking_service : has
     services ||--o{ service_images : has
-    bookings ||--o{ booking_tasks : has
     bookings ||--o{ transactions : has
     bookings ||--o{ activity_logs : about
     services ||--o{ activity_logs : about
@@ -84,16 +83,6 @@ erDiagram
         timestamp created_at
     }
 
-    booking_tasks {
-        uuid id PK
-        uuid booking_id FK
-        varchar title
-        boolean is_done
-        int sort_order
-        timestamp done_at
-        timestamp created_at
-    }
-
     transactions {
         uuid id PK
         uuid booking_id FK
@@ -116,7 +105,7 @@ erDiagram
     activity_logs {
         uuid id PK
         uuid user_id FK
-        varchar entity_type "booking|transaction|service|user|task"
+        varchar entity_type "booking|transaction|service|user"
         uuid entity_id "nullable"
         uuid booking_id FK "nullable, denormalized utk filter cepat"
         varchar action
@@ -135,7 +124,6 @@ erDiagram
 | `services` | `booking_service` | 1—N | jasa yg dipesan (via pivot) |
 | `bookings` | `booking_service` | 1—N | layanan + qty per booking |
 | `services` | `service_images` | 1—N | foto jasa (upload atau link) |
-| `bookings` | `booking_tasks` | 1—N | checklist kerja per booking |
 | `bookings` | `transactions` | 1—N | bayar Snap per booking |
 | `users` | `transactions` | 1—N | yang create Snap |
 | `users` | `activity_logs` | 1—N | siapa lakukan aksi |
@@ -241,15 +229,6 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 
 ---
 
-## Task
-
-### `booking_tasks`
-- Checklist internal per booking
-- Hapus booking → cascade hapus task
-- Toggle `is_done` → `activity_logs`
-
----
-
 ## Konsistensi data antar relasi
 
 ### FK & cascade
@@ -260,7 +239,6 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 | `service_images.service_id` | `services` | CASCADE |
 | `booking_service.booking_id` | `bookings` | CASCADE |
 | `booking_service.service_id` | `services` | RESTRICT |
-| `booking_tasks.booking_id` | `bookings` | CASCADE |
 | `transactions.booking_id` | `bookings` | RESTRICT |
 | `transactions.user_id` | `users` | RESTRICT |
 | `activity_logs.user_id` | `users` | RESTRICT |
@@ -292,7 +270,6 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 | `booking.created` / `booking.updated` / `booking.status_changed` | booking |
 | `booking.schedule_adjusted` | staff ubah `starts_at`/`ends_at` |
 | `booking.rejected` | gagal validasi |
-| `task.created` / `task.toggled` / `task.deleted` | checklist |
 | `transaction.created` / `transaction.webhook` | Snap |
 | `user.created` / `user.updated` / `user.deactivated` | user mgmt |
 
@@ -352,3 +329,4 @@ ERD di atas adalah spesifikasi target. Backend Laravel (`backend-mua/`) sengaja 
 | `activity_logs.user_id` untuk `transaction.webhook` | `null` | Actor adalah Midtrans, bukan user internal |
 | Cek jadwal | `POST /api/schedule/check` | Butuh body tervalidasi; secara semantik read-only |
 | `bookings.service_id` diganti pivot `booking_service` | `bookings` tidak lagi punya kolom `service_id`; relasi M:N via `booking_service` dengan `qty` | Multi-service + quantity per booking |
+| `booking_tasks` (checklist kerja) | Dihapus dari aplikasi | Fitur dicabut; migration `2026_08_16_000003_drop_booking_tasks_table` men-drop tabel dan membersihkan log `entity_type = 'task'` |

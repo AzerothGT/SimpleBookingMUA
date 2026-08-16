@@ -2,7 +2,6 @@
 
 use App\Models\ActivityLog;
 use App\Models\Booking;
-use App\Models\BookingTask;
 use App\Models\Service;
 use App\Models\ServiceImage;
 use App\Models\Transaction;
@@ -62,14 +61,8 @@ it('allows every internal role to access booking operations', function (string $
         ->assertSuccessful();
 })->with(['owner', 'admin', 'staff']);
 
-it('allows every internal role to manage booking tasks and view transactions', function (string $role) {
+it('allows every internal role to view booking transactions', function (string $role) {
     $booking = Booking::factory()->create();
-
-    $this->withToken(tokenForRole($role))
-        ->postJson("/api/bookings/{$booking->id}/bookingTasks", [
-            'title' => 'Prepare makeup kit',
-        ])
-        ->assertCreated();
 
     $this->withToken(tokenForRole($role))
         ->getJson("/api/bookings/{$booking->id}/transactions")
@@ -96,18 +89,6 @@ it('rejects a service image outside the nested service', function () {
     $this->withToken(tokenForRole('admin'))
         ->patchJson("/api/services/{$secondService->id}/serviceImages/{$image->id}", [
             'sort_order' => 2,
-        ])
-        ->assertNotFound();
-});
-
-it('rejects a booking task outside the nested booking', function () {
-    $firstBooking = Booking::factory()->create();
-    $secondBooking = Booking::factory()->create();
-    $task = BookingTask::factory()->for($firstBooking)->create();
-
-    $this->withToken(tokenForRole('staff'))
-        ->patchJson("/api/bookings/{$secondBooking->id}/bookingTasks/{$task->id}", [
-            'title' => 'Wrong parent',
         ])
         ->assertNotFound();
 });

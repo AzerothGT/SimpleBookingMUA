@@ -13,7 +13,6 @@ class DatabaseSeeder extends Seeder
             ServiceSeeder::class,
             ServiceImageSeeder::class,
             BookingSeeder::class,
-            BookingTaskSeeder::class,
             TransactionSeeder::class,
         ]);
     }

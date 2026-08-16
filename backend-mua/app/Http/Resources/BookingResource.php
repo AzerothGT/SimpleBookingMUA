@@ -41,7 +41,6 @@ class BookingResource extends JsonResource
                 ]);
             }),
             'staff' => UserResource::make($this->whenLoaded('user')),
-            'tasks' => BookingTaskResource::collection($this->whenLoaded('bookingTasks')),
             'transactions' => TransactionResource::collection($this->whenLoaded('transactions')),
             'activity_logs' => ActivityLogResource::collection($this->whenLoaded('activityLogs')),
         ];

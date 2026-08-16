@@ -69,7 +69,7 @@ it('hides internal relations from the public booking response', function () {
     ])->assertCreated()->json();
 
     expect($payload)->toHaveKeys(['id', 'status', 'services'])
-        ->and($payload)->not->toHaveKeys(['staff', 'transactions', 'tasks', 'activity_logs', 'service']);
+        ->and($payload)->not->toHaveKeys(['staff', 'transactions', 'activity_logs', 'service']);
 });
 
 it('keeps activity log payloads free of raw morph columns', function () {

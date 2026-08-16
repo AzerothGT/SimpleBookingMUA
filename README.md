@@ -1,6 +1,6 @@
 # SimpleBookingMUA
 
-REST API booking Makeup Artist (MUA). Client publik mengusulkan tanggal, jam selesai, dan alamat; owner/admin/staff yang menentukan jam datang aktual, mengelola checklist kerja, dan menagih pembayaran lewat Midtrans Snap.
+REST API booking Makeup Artist (MUA). Client publik mengusulkan tanggal, jam selesai, dan alamat; owner/admin/staff yang menentukan jam datang aktual, dan menagih pembayaran lewat Midtrans Snap.
 
 Backend Laravel 13, MySQL, autentikasi opaque bearer token, dokumentasi OpenAPI otomatis.
 
@@ -11,7 +11,6 @@ Backend Laravel 13, MySQL, autentikasi opaque bearer token, dokumentasi OpenAPI 
 - **State machine booking** — `pending → confirmed → done`, `cancelled` sebagai terminal. Transisi ilegal ditolak `422`.
 - **Katalog service + galeri** — banyak foto per service (upload atau URL eksternal), dijamin tepat satu cover per service di level database.
 - **Quantity per service** — setiap booking bisa pilih multiple service dengan qty (jumlah orang) masing-masing, disimpan di tabel pivot `booking_service`.
-- **Checklist kerja** — task per booking dengan urutan dan penanda selesai.
 - **Pembayaran Midtrans Snap** — create transaction, verifikasi signature SHA-512 webhook, pemrosesan idempotent, tidak bisa downgrade status yang sudah settlement.
 - **Audit trail** — setiap aksi penting tercatat di `activity_logs` beserta snapshot `before`/`after`.
 - **Swagger UI** — spec dihasilkan dari attribute PHP, bukan file YAML manual.
@@ -39,7 +38,6 @@ app/
 │   ├── Bookings/     CreateBooking, UpdateBooking, AssignBookingSchedule, ChangeBookingStatus
 │   ├── Transactions/ CreateSnapTransaction, HandleMidtransWebhook
 │   ├── Services/     UpdateService, SaveServiceImage
-│   ├── BookingTasks/ ManageBookingTask
 │   ├── Users/        ManageUser
 │   └── ActivityLogs/ RecordActivity
 ├── Contracts/        PaymentGateway (Midtrans di-swap saat test)
@@ -169,7 +167,6 @@ Token dianggap valid bila belum expired dan user `is_active`. `POST /api/logout`
 | `GET·PATCH·DELETE` | `/api/bookings[/{booking}]` | Kelola booking |
 | `POST` | `/api/bookings/{booking}/assign-staff` | Set staff + `starts_at`/`ends_at` |
 | `PATCH` | `/api/bookings/{booking}/status` | Ubah status |
-| `POST·PATCH·DELETE` | `/api/bookings/{booking}/bookingTasks[/{task}]` | Checklist kerja |
 | `GET` | `/api/bookings/{booking}/transactions` | Riwayat pembayaran |
 | `POST` | `/api/bookings/{booking}/transactions/snap` | Buat Snap transaction |
 | `GET` | `/api/activity-logs[/{log}]` | Audit trail (owner/admin) |
@@ -247,7 +244,7 @@ Belum ada: frontend, refund flow, notifikasi WhatsApp/email, ownership scoping b
 SimpleBookingMUA/
 ├── backend-mua/    Aplikasi Laravel
 ├── frontend-mua/   Aplikasi React (user: booking, services, my-bookings; admin: starter)
-└── docs/           ERD, aturan bisnis, checklist compliance
+└── docs/           ERD, aturan bisnis, catatan audit
 ```
 
 ## Lisensi

@@ -2,7 +2,6 @@
 
 use App\Models\ActivityLog;
 use App\Models\Booking;
-use App\Models\BookingTask;
 use App\Models\Service;
 use App\Models\Transaction;
 use App\Models\User;
@@ -18,7 +17,7 @@ it('registers every activity log alias in the morph map', function () {
         ->and(Relation::getMorphedModel('transaction'))->toBe(Transaction::class)
         ->and(Relation::getMorphedModel('service'))->toBe(Service::class)
         ->and(Relation::getMorphedModel('user'))->toBe(User::class)
-        ->and(Relation::getMorphedModel('task'))->toBe(BookingTask::class);
+        ->and(Relation::getMorphedModel('task'))->toBeNull();
 });
 
 it('resolves activity log aliases through the morph map', function () {
@@ -66,17 +65,6 @@ it('blocks inactive users from authenticating via sanctum', function () {
 
     $this->withToken($activeToken)->getJson('/api/user')->assertSuccessful();
     $this->withToken($inactiveToken)->getJson('/api/user')->assertUnauthorized();
-});
-
-it('keeps task completion timestamp synchronized', function () {
-    $task = BookingTask::factory()->create(['is_done' => false]);
-    $doneAt = now();
-
-    $task->update(['is_done' => true, 'done_at' => $doneAt]);
-    expect($task->fresh()->done_at)->not->toBeNull();
-
-    $task->update(['is_done' => false, 'done_at' => null]);
-    expect($task->fresh()->done_at)->toBeNull();
 });
 
 it('uses password_hash for Laravel authentication and hashes plaintext values', function () {

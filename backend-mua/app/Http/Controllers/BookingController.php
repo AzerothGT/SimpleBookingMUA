@@ -118,7 +118,7 @@ class BookingController extends Controller
             new OA\Parameter(name: 'booking', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'Booking detail with tasks, transactions, logs'),
+            new OA\Response(response: 200, description: 'Booking detail with transactions, logs'),
             new OA\Response(response: 404, description: 'Not found'),
         ]
     )]
@@ -129,7 +129,6 @@ class BookingController extends Controller
         return BookingResource::make($booking->load([
             'user',
             'bookingServices.service',
-            'bookingTasks',
             'transactions',
             'activityLogs.user',
         ]));

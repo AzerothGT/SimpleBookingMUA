@@ -16,7 +16,7 @@ class ActivityLogFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'entity_type' => fake()->randomElement(['booking', 'transaction', 'service', 'user', 'task']),
+            'entity_type' => fake()->randomElement(['booking', 'transaction', 'service', 'user']),
             'entity_id' => null,
             'booking_id' => null,
             'action' => fake()->randomElement(['created', 'updated', 'deleted', 'status_changed', 'schedule_adjusted']),

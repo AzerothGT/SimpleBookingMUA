@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Contracts\PaymentGateway;
 use App\Models\Booking;
-use App\Models\BookingTask;
 use App\Models\Service;
 use App\Models\Transaction;
 use App\Models\User;
@@ -39,7 +38,6 @@ class AppServiceProvider extends ServiceProvider
             'transaction' => Transaction::class,
             'service' => Service::class,
             'user' => User::class,
-            'task' => BookingTask::class,
         ]);
     }
 }
