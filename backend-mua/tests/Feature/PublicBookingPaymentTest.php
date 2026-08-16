@@ -63,6 +63,26 @@ it('does not create Snap before a booking is scheduled', function () {
         ->assertUnprocessable();
 });
 
+it('creates a public Snap transaction for a scheduled pending booking', function () {
+    [$booking, $token] = publicPaymentBooking();
+    $booking->update([
+        'starts_at' => '2026-08-10 12:00:00',
+        'ends_at' => '2026-08-10 15:00:00',
+    ]);
+
+    app()->bind(PaymentGateway::class, fn () => new class implements PaymentGateway
+    {
+        public function createSnap(Booking $booking, string $orderId, int $grossAmount): array
+        {
+            return ['token' => 'scheduled-pending-token', 'redirect_url' => 'https://example.test/pay'];
+        }
+    });
+
+    $this->postJson("/api/public/bookings/{$booking->id}/transactions/snap?token={$token}")
+        ->assertCreated()
+        ->assertJsonPath('snap_token', 'scheduled-pending-token');
+});
+
 it('creates one public Snap transaction after scheduling', function () {
     [$booking, $token] = publicPaymentBooking();
     $booking->update([
@@ -97,3 +117,47 @@ it('creates one public Snap transaction after scheduling', function () {
         ->and(Transaction::where('booking_id', $booking->id)->count())->toBe(1)
         ->and(Transaction::where('booking_id', $booking->id)->value('user_id'))->toBeNull();
 });
+
+it('reuses a paid transaction without calling Midtrans again', function (string $paidStatus) {
+    [$booking, $token] = publicPaymentBooking();
+    $booking->update([
+        'status' => 'confirmed',
+        'starts_at' => '2026-08-10 12:00:00',
+        'ends_at' => '2026-08-10 15:00:00',
+    ]);
+
+    $calls = 0;
+    app()->bind(PaymentGateway::class, function () use (&$calls) {
+        return new class($calls) implements PaymentGateway
+        {
+            public function __construct(private int &$calls) {}
+
+            public function createSnap(Booking $booking, string $orderId, int $grossAmount): array
+            {
+                $this->calls++;
+
+                return ['token' => 'public-snap-token', 'redirect_url' => 'https://example.test/pay'];
+            }
+        };
+    });
+
+    $first = $this->postJson("/api/public/bookings/{$booking->id}/transactions/snap?token={$token}")
+        ->assertCreated();
+
+    Transaction::findOrFail($first->json('id'))->update([
+        'transaction_status' => $paidStatus,
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+    ]);
+
+    $this->postJson("/api/public/bookings/{$booking->id}/transactions/snap?token={$token}")
+        ->assertOk()
+        ->assertJsonPath('id', $first->json('id'))
+        ->assertJsonPath('transaction_status', $paidStatus);
+
+    expect($calls)->toBe(1)
+        ->and(Transaction::where('booking_id', $booking->id)->count())->toBe(1);
+})->with([
+    'settlement' => ['settlement'],
+    'capture' => ['capture'],
+]);

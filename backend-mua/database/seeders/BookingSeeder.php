@@ -16,7 +16,7 @@ class BookingSeeder extends Seeder
 
         $bookings = [
             [
-                'service_id' => $services[0]->id,
+                'services' => [['id' => $services[0]->id, 'qty' => 1]],
                 'user_id' => $staff[0]->id,
                 'client_name' => 'Siti Nurhaliza',
                 'client_phone' => '081234567890',
@@ -32,7 +32,7 @@ class BookingSeeder extends Seeder
                 'ends_at' => now()->addDays(2)->setTime(14, 0),
             ],
             [
-                'service_id' => $services[1]->id,
+                'services' => [['id' => $services[1]->id, 'qty' => 2]],
                 'user_id' => $staff[1]->id,
                 'client_name' => 'Rina Nose',
                 'client_phone' => '081234567891',
@@ -48,7 +48,7 @@ class BookingSeeder extends Seeder
                 'ends_at' => now()->addDays(3)->setTime(16, 0),
             ],
             [
-                'service_id' => $services[2]->id,
+                'services' => [['id' => $services[2]->id, 'qty' => 1]],
                 'user_id' => $staff[0]->id,
                 'client_name' => 'Dewi Persik',
                 'client_phone' => '081234567892',
@@ -64,7 +64,7 @@ class BookingSeeder extends Seeder
                 'ends_at' => now()->addDays(5)->setTime(18, 0),
             ],
             [
-                'service_id' => $services[3]->id,
+                'services' => [['id' => $services[3]->id, 'qty' => 3]],
                 'user_id' => $staff[1]->id,
                 'client_name' => 'Ayu Ting Ting',
                 'client_phone' => '081234567893',
@@ -82,7 +82,16 @@ class BookingSeeder extends Seeder
         ];
 
         foreach ($bookings as $booking) {
-            Booking::create($booking);
+            $servicesData = $booking['services'];
+            unset($booking['services']);
+
+            $model = Booking::create($booking);
+            foreach ($servicesData as $service) {
+                $model->bookingServices()->create([
+                    'service_id' => $service['id'],
+                    'qty' => $service['qty'],
+                ]);
+            }
         }
     }
 }

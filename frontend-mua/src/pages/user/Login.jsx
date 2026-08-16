@@ -3,6 +3,7 @@ import { ArrowRightIcon, EyeIcon, EyeSlashIcon, WarningCircleIcon } from '@phosp
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../../api/bookingApi'
 import Navbar from '../../components/Navbar'
+import { saveSession } from '../../session'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -21,8 +22,7 @@ export default function LoginPage() {
 
     try {
       const payload = await login({ username, password })
-      window.localStorage.setItem('auth_token', payload.token)
-      window.localStorage.setItem('auth_user', JSON.stringify(payload.user))
+      saveSession({ token: payload.token, user: payload.user, expires_at: payload.expires_at })
       navigate('/admin', { replace: true })
     } catch (err) {
       setError(err?.payload?.message ?? err?.message ?? 'Login gagal. Periksa username dan password.')

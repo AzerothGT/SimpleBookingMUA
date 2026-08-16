@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { clearSession, getStoredSession, hasValidSession } from '../session'
 
 export default function Navbar() {
   const location = useLocation()
@@ -7,17 +8,11 @@ export default function Navbar() {
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem('auth_user')
-      setUser(stored ? JSON.parse(stored) : null)
-    } catch {
-      setUser(null)
-    }
+    setUser(hasValidSession() ? getStoredSession()?.user ?? null : null)
   }, [location.pathname])
 
   const handleLogout = () => {
-    window.localStorage.removeItem('auth_token')
-    window.localStorage.removeItem('auth_user')
+    clearSession()
     setUser(null)
     navigate('/', { replace: true })
   }
@@ -30,6 +25,7 @@ export default function Navbar() {
         {user
           ? (
             <>
+              <Link className="nav-link" to="/admin">Dashboard</Link>
               <span className="nav-user" aria-label={`Login sebagai ${user.name}`}>{user.name}</span>
               <button type="button" className="nav-link nav-logout" onClick={handleLogout}>Keluar</button>
             </>

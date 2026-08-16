@@ -24,15 +24,15 @@ export function listBookings() {
 }
 
 export function login(credentials) {
-  return apiClient.post('/login', credentials)
+  return apiClient.post('/login', credentials, { auth: false })
 }
 
 export function getPublicBookingStatus(id, token) {
-  return apiClient.get(`/public/bookings/${encodeURIComponent(id)}/status?token=${encodeURIComponent(token)}`)
+  return apiClient.get(`/public/bookings/${encodeURIComponent(id)}/status?token=${encodeURIComponent(token)}`, { auth: false })
 }
 
 export function createPublicSnapTransaction(id, token) {
-  return apiClient.post(`/public/bookings/${encodeURIComponent(id)}/transactions/snap?token=${encodeURIComponent(token)}`, {})
+  return apiClient.post(`/public/bookings/${encodeURIComponent(id)}/transactions/snap?token=${encodeURIComponent(token)}`, {}, { auth: false })
 }
 
 let snapLoader
@@ -42,9 +42,15 @@ export function loadMidtransSnap() {
   if (snapLoader) return snapLoader
 
   snapLoader = new Promise((resolve, reject) => {
+    const clientKey = import.meta.env.VITE_MIDTRANS_CLIENT_KEY
+    if (!clientKey) {
+      reject(new Error('Konfigurasi pembayaran belum lengkap. Hubungi penyedia layanan.'))
+      return
+    }
+
     const script = document.createElement('script')
     script.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
-    script.dataset.clientKey = import.meta.env.VITE_MIDTRANS_CLIENT_KEY ?? ''
+    script.dataset.clientKey = clientKey
     script.onload = () => window.snap ? resolve(window.snap) : reject(new Error('Midtrans Snap gagal dimuat.'))
     script.onerror = () => reject(new Error('Midtrans Snap gagal dimuat.'))
     document.head.appendChild(script)

@@ -1,18 +1,33 @@
+import { clearSession, getToken, isSessionExpired } from '../session'
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000/api'
 
+function forceRelogin() {
+  clearSession()
+  window.location.assign('/login')
+}
+
 export async function request(path, options = {}) {
-  const token = window.localStorage.getItem('auth_token')
-  const headers = {
-    Accept: 'application/json',
-    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
+  const { auth = true, ...requestOptions } = options
+  const token = auth ? getToken() : null
+
+  if (auth && token && isSessionExpired()) {
+    forceRelogin()
+    throw new Error('Sesi sudah berakhir. Silakan masuk kembali.')
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers })
+  const headers = {
+    Accept: 'application/json',
+    ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...requestOptions.headers,
+  }
+
+  const response = await fetch(`${API_URL}${path}`, { ...requestOptions, headers })
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
+    if (auth && token && response.status === 401) forceRelogin()
     const error = new Error(payload?.message ?? 'Permintaan gagal diproses.')
     error.status = response.status
     error.payload = payload

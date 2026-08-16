@@ -29,14 +29,14 @@ class PublicBookingController extends Controller
     ): JsonResource {
         $this->authorizeToken($request, $booking);
 
-        if ($booking->status !== 'confirmed' || ! $booking->starts_at || ! $booking->ends_at) {
+        if (! $booking->starts_at || ! $booking->ends_at) {
             throw ValidationException::withMessages([
-                'booking' => 'Payment is available after the booking schedule is confirmed.',
+                'booking' => 'Payment is available after the booking schedule is set.',
             ]);
         }
 
         $transaction = $booking->transactions()->latest()->first();
-        if (! $transaction || $transaction->transaction_status !== 'pending') {
+        if (! $transaction || (! $transaction->isPending() && ! $transaction->isPaid())) {
             $transaction = $createSnap->handle($booking, null);
         }
 

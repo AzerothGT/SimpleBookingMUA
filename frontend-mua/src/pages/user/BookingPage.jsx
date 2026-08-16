@@ -47,6 +47,7 @@ export default function BookingPage() {
   })
   const [publicBooking, setPublicBooking] = useState(null)
   const [publicError, setPublicError] = useState('')
+  const [trackingLost, setTrackingLost] = useState(false)
   const [paymentLoading, setPaymentLoading] = useState(false)
   const [copyState, setCopyState] = useState('idle')
   const [navigationLoading, setNavigationLoading] = useState(false)
@@ -265,6 +266,7 @@ export default function BookingPage() {
     setPublicSession(null)
     setPublicBooking(null)
     setPublicError('')
+    setTrackingLost(false)
     setCopyState('idle')
     setForm(emptyForm)
     setStep(1)
@@ -281,28 +283,39 @@ export default function BookingPage() {
     if (!publicSession) return undefined
     let active = true
     let interval
+    let stopped = false
+    const stopPolling = () => {
+      stopped = true
+      if (interval) window.clearInterval(interval)
+    }
     const refresh = async () => {
+      if (stopped) return
       try {
         const payload = await getPublicBookingStatus(publicSession.bookingId, publicSession.token)
         if (active) {
           const nextBooking = payload?.data ?? payload
           setPublicBooking(nextBooking)
           setPublicError('')
-          if (['cancelled', 'done'].includes(nextBooking?.status) || ['capture', 'settlement'].includes(nextBooking?.payment?.transaction_status)) window.clearInterval(interval)
+          if (['cancelled', 'done'].includes(nextBooking?.status) || ['capture', 'settlement'].includes(nextBooking?.payment?.transaction_status)) stopPolling()
         }
       } catch (error) {
         if (!active) return
         if (error.status === 401) {
+          stopPolling()
           window.localStorage.removeItem('public_booking_session')
           setPublicSession(null)
           setPublicBooking(null)
+          setTrackingLost(true)
+          setPublicError('Link pelacakan booking sudah tidak valid atau kedaluwarsa.')
+          return
         }
         setPublicError(error.message)
       }
     }
-    refresh()
-    interval = window.setInterval(refresh, 10000)
-    return () => { active = false; window.clearInterval(interval) }
+    refresh().then(() => {
+      if (active && !stopped) interval = window.setInterval(refresh, 10000)
+    })
+    return () => { active = false; stopPolling() }
   }, [publicSession])
 
   const startPayment = async () => {
@@ -325,6 +338,18 @@ export default function BookingPage() {
     } finally {
       setPaymentLoading(false)
     }
+  }
+
+  if (trackingLost) {
+    return (
+      <main className="success-page"><div className="success-card">
+        <span className="eyebrow">Akses tidak valid</span>
+        <h1>Link pelacakan sudah kedaluwarsa.</h1>
+        <p>Link tracking booking ini sudah tidak valid atau melewati masa berlakunya. Ajukan booking baru, atau hubungi tim bila kamu punya booking yang sedang berjalan.</p>
+        {publicError && <div className="login-error" role="alert">{publicError}</div>}
+        <button className="button button-primary" type="button" onClick={resetBooking}>Buat booking baru</button>
+      </div></main>
+    )
   }
 
   if (submitState.status === 'success' && publicSession) {

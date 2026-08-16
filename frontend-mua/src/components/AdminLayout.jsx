@@ -1,19 +1,14 @@
 import { ArrowClockwiseIcon } from '@phosphor-icons/react'
-import { useState } from 'react'
 import DashboardSidebar from './DashboardSidebar'
+import { getStoredSession } from '../session'
 
 export default function AdminLayout({ eyebrow = 'Ruang kerja', title, description, action, onRefresh, isLoading = false, children }) {
-  const [role, setRole] = useState(() => window.localStorage.getItem('demo_role') || 'admin')
-
-  const handleRoleChange = (nextRole) => {
-    setRole(nextRole)
-    window.localStorage.setItem('demo_role', nextRole)
-  }
+  const sessionUser = getStoredSession()?.user
 
   return (
     <main className="admin-page">
       <div className="admin-shell">
-        <DashboardSidebar role={role} onRoleChange={handleRoleChange} />
+        <DashboardSidebar role={sessionUser?.role ?? 'staff'} userName={sessionUser?.name} />
         <section className="admin-page-content">
           <header className="admin-page-heading">
             <div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1>{description && <p>{description}</p>}</div>
