@@ -55,6 +55,7 @@ Route::middleware('auth.session')->group(function () {
 
     // Bookings
     Route::apiResource('bookings', BookingController::class)->except(['store']);
+    Route::post('/bookings/{booking}/payment-link', [BookingController::class, 'paymentLink']);
     Route::post('/bookings/{booking}/assign-staff', [BookingController::class, 'assignStaff']);
     Route::patch('/bookings/{booking}/status', [BookingController::class, 'changeStatus']);
 

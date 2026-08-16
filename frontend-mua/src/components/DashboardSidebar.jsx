@@ -1,12 +1,12 @@
-import { ChartBarIcon, ClipboardTextIcon, GearIcon, HouseIcon, SignOutIcon } from '@phosphor-icons/react'
+import { CalendarCheckIcon, HouseIcon, ListBulletsIcon, PaintBrushIcon, SignOutIcon } from '@phosphor-icons/react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clearSession } from '../session'
 
 const links = [
   { to: '/admin', label: 'Dashboard', icon: HouseIcon, end: true },
-  { to: '/admin/bookings', label: 'Booking', icon: ClipboardTextIcon },
-  { to: '/admin/services', label: 'Layanan', icon: GearIcon },
-  { to: '/admin/activity', label: 'Aktivitas', icon: ChartBarIcon, ownerOnly: true },
+  { to: '/admin/bookings', label: 'Booking', icon: CalendarCheckIcon },
+  { to: '/admin/services', label: 'Layanan', icon: PaintBrushIcon },
+  { to: '/admin/activity', label: 'Aktivitas', icon: ListBulletsIcon, ownerOnly: true },
 ]
 
 export default function DashboardSidebar({ role, userName }) {

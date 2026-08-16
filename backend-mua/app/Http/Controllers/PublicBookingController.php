@@ -18,7 +18,7 @@ class PublicBookingController extends Controller
 
         return PublicBookingResource::make($booking->load([
             'bookingServices.service',
-            'transactions' => fn ($query) => $query->latest()->limit(1),
+            'transactions' => fn ($query) => $query->latest(),
         ]));
     }
 
@@ -35,10 +35,33 @@ class PublicBookingController extends Controller
             ]);
         }
 
-        $transaction = $booking->transactions()->latest()->first();
-        if (! $transaction || (! $transaction->isPending() && ! $transaction->isPaid())) {
-            $transaction = $createSnap->handle($booking, null);
+        $type = $request->string('type', 'dp')->toString();
+        if (! in_array($type, ['dp', 'pelunasan'], true)) {
+            throw ValidationException::withMessages(['type' => 'Pilih pembayaran DP atau pelunasan.']);
         }
+
+        $booking->load(['bookingServices.service', 'transactions']);
+        $transaction = $booking->transactions
+            ->where('type', $type)
+            ->filter(fn ($item) => $item->isPending() || $item->isPaid())
+            ->sortByDesc('created_at')
+            ->first();
+
+        if ($transaction?->isPaid() || $transaction?->isPending()) {
+            return TransactionResource::make($transaction);
+        }
+
+        $total = (int) round($booking->bookingServices->sum(fn ($item) => (float) $item->service->price * $item->qty));
+        $paid = (int) $booking->transactions->filter(fn ($item) => $item->isPaid())->sum('gross_amount');
+        $remaining = max(0, $total - $paid);
+        $minimumDp = $total < 500000 ? 50000 : (int) ceil($total * 0.10);
+        $amount = $type === 'dp' ? min($remaining, $minimumDp) : $remaining;
+
+        if ($amount <= 0 || ($type === 'dp' && $paid > 0)) {
+            throw ValidationException::withMessages(['payment' => 'Pembayaran ini sudah tidak tersedia.']);
+        }
+
+        $transaction = $createSnap->handle($booking, null, $type, $amount);
 
         return TransactionResource::make($transaction);
     }

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, CaretDownIcon, CheckIcon, CopyIcon, WarningIcon } from '@phosphor-icons/react'
-import { createBooking, createPublicSnapTransaction, getPublicBookingStatus, listServices, loadMidtransSnap } from '../../api/bookingApi'
+import { ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, CaretDownIcon, CheckIcon, CopyIcon, WarningIcon, XIcon } from '@phosphor-icons/react'
+import { createBooking, getPublicBookingStatus, listServices } from '../../api/bookingApi'
 import AnalogTimePicker from '../../components/AnalogTimePicker'
 import BookingCalendar from '../../components/BookingCalendar'
 
 import { useToast } from '../../context/useToast'
 
+
+const stepLabels = ['Pilih layanan', 'Pilih tanggal & jam', 'Isi detail', 'Kirim']
 
 const emptyForm = {
   serviceItems: [],
@@ -48,14 +50,28 @@ export default function BookingPage() {
   const [publicBooking, setPublicBooking] = useState(null)
   const [publicError, setPublicError] = useState('')
   const [trackingLost, setTrackingLost] = useState(false)
-  const [paymentLoading, setPaymentLoading] = useState(false)
   const [copyState, setCopyState] = useState('idle')
   const [navigationLoading, setNavigationLoading] = useState(false)
   const [servicesLoading, setServicesLoading] = useState(true)
   const [servicesError, setServicesError] = useState('')
   const [showOptional, setShowOptional] = useState(false)
+  const [openPicker, setOpenPicker] = useState(null)
   const { toast } = useToast()
   const errorTickRef = useRef(0)
+
+  useEffect(() => {
+    if (!openPicker) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setOpenPicker(null)
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [openPicker])
 
   const highlightErrors = (errorKeys) => {
     if (!errorKeys.length) return
@@ -272,6 +288,7 @@ export default function BookingPage() {
     setStep(1)
     setErrors({})
     setCalendarAvailability({ busyRanges: [], loading: true, error: '' })
+    setOpenPicker(null)
     setSubmitState({ status: 'idle', message: '' })
   }
 
@@ -318,28 +335,6 @@ export default function BookingPage() {
     return () => { active = false; stopPolling() }
   }, [publicSession])
 
-  const startPayment = async () => {
-    if (!publicSession || !publicBooking?.starts_at || !publicBooking?.ends_at) return
-    setPaymentLoading(true)
-    setPublicError('')
-    try {
-      const payload = await createPublicSnapTransaction(publicSession.bookingId, publicSession.token)
-      const transaction = payload?.data ?? payload
-      if (transaction.snap_token) {
-        const snap = await loadMidtransSnap()
-        snap.pay(transaction.snap_token)
-      } else if (transaction.redirect_url) {
-        window.location.assign(transaction.redirect_url)
-      } else {
-        throw new Error('Tautan pembayaran belum tersedia.')
-      }
-    } catch (error) {
-      setPublicError(error.message)
-    } finally {
-      setPaymentLoading(false)
-    }
-  }
-
   if (trackingLost) {
     return (
       <main className="success-page"><div className="success-card">
@@ -362,7 +357,7 @@ export default function BookingPage() {
         <p>{paid ? 'Pembayaran sedang tercatat di sistem.' : 'Simpan ID booking ini. Status akan diperbarui otomatis setelah tim menetapkan jadwal.'}</p>
         <div className="public-booking-status"><span className="detail-label">Booking ID</span><div className="public-booking-id-row"><strong>{publicSession.bookingId}</strong><button className="copy-booking-id" type="button" onClick={copyBookingId} aria-label={copyState === 'success' ? 'Booking ID tersalin' : `Salin booking ID ${publicSession.bookingId}`} title={copyState === 'success' ? 'Tersalin' : 'Salin booking ID'}>{copyState === 'success' ? <CheckIcon size={16} weight="bold" aria-hidden="true" /> : <CopyIcon size={16} weight="bold" aria-hidden="true" />}</button></div>{copyState === 'error' && <p className="copy-booking-id-error" role="alert">Tidak dapat menyalin otomatis. Pilih booking ID secara manual.</p>}<span className="detail-label">Status</span><strong>{publicBooking?.status ?? 'pending'}</strong>{scheduled && <><span className="detail-label">Jadwal mulai</span><strong>{new Date(publicBooking.starts_at).toLocaleString('id-ID')}</strong></>}</div>
         {publicError && <div className="login-error" role="alert">{publicError}</div>}
-        {!paid && <button className="button button-primary" disabled={!scheduled || paymentLoading} onClick={startPayment}>{paymentLoading ? 'Menyiapkan pembayaran...' : scheduled ? 'Bayar sekarang' : 'Menunggu jadwal tim'}</button>}
+        {!paid && scheduled && <button className="button button-primary" disabled={paymentLoading} onClick={() => navigate(`/payment?booking=${encodeURIComponent(publicSession.bookingId)}&token=${encodeURIComponent(publicSession.token)}`)}>Buka pembayaran</button>}
         <button className="button button-secondary" onClick={resetBooking}>Ajukan booking lain</button>
       </div></main>
     )
@@ -373,10 +368,7 @@ export default function BookingPage() {
       <section className="booking-shell" id="booking" aria-labelledby="booking-title">
         <div className="section-heading">
           <div><button type="button" className="booking-cancel" onClick={() => navigate('/')}><ArrowLeftIcon size={14} weight="bold" aria-hidden="true" /> Batal dan kembali</button><h2 id="booking-title">Booking</h2></div>
-          <span className="step-counter">0{step} / 04</span>
-        </div>
-        <div className="progress" aria-label={`Tahap ${step} dari 4`}>
-          {['Pilih layanan', 'Pilih tanggal & jam', 'Isi detail', 'Kirim'].map((label, index) => <span key={label} className={index + 1 <= step ? 'active' : ''}><i>{String(index + 1).padStart(2, '0')}</i>{label}</span>)}
+          <div className="step-meta"><span className="step-label">{stepLabels[step - 1]}</span><span className="step-counter">0{step} / 04</span></div>
         </div>
 
         <form className="booking-grid" onSubmit={submitBooking} noValidate>
@@ -461,23 +453,55 @@ export default function BookingPage() {
             {step === 2 && <>
 
               <div className="step-two-layout">
-                <div id="field-date">
-                  <BookingCalendar
-                    selectedDate={form.date}
-                    onSelectedDateChange={(date) => updateField('date', date)}
-                    onAvailabilityChange={handleAvailabilityChange}
-                  />
-                  {errors.date && <small className="field-error" role="alert">{errors.date}</small>}
+                <div className="picker-controls">
+                  <div className="picker-popover-wrap" id="field-date">
+                    <button
+                      type="button"
+                      className={`picker-trigger ${openPicker === 'date' ? 'open' : ''}`}
+                      aria-expanded={openPicker === 'date'}
+                      aria-controls="booking-date-popover"
+                      onClick={() => setOpenPicker((current) => current === 'date' ? null : 'date')}
+                    >
+                      <span className="step-kicker">Tanggal</span>
+                      <strong>{form.date || 'Pilih tanggal'}</strong>
+                    </button>
+                    {openPicker === 'date' && <div className="picker-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setOpenPicker(null)}>
+                      <div className="picker-modal" id="booking-date-popover" role="dialog" aria-modal="true" aria-label="Pilih tanggal makeup">
+                        <div className="picker-modal-header"><span className="step-kicker">Pilih tanggal</span><button type="button" className="picker-modal-close" aria-label="Tutup pemilih tanggal" title="Tutup" onClick={() => setOpenPicker(null)}><XIcon size={18} aria-hidden="true" /></button></div>
+                        <BookingCalendar
+                          selectedDate={form.date}
+                          onSelectedDateChange={(date) => { updateField('date', date); setOpenPicker(null) }}
+                          onAvailabilityChange={handleAvailabilityChange}
+                        />
+                      </div>
+                    </div>}
+                    {errors.date && <small className="field-error" role="alert">{errors.date}</small>}
+                  </div>
+
+                  <div className="picker-popover-wrap" id="field-endTime">
+                    <button
+                      type="button"
+                      className={`picker-trigger ${openPicker === 'time' ? 'open' : ''} ${!form.date ? 'disabled' : ''}`}
+                      aria-expanded={openPicker === 'time'}
+                      aria-controls="booking-time-popover"
+                      disabled={!form.date}
+                      onClick={() => setOpenPicker((current) => current === 'time' ? null : 'time')}
+                    >
+                      <span className="step-kicker">Jam selesai</span>
+                      <strong>{form.endTime || 'Pilih jam'}</strong>
+                    </button>
+                    {openPicker === 'time' && <div className="picker-modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setOpenPicker(null)}>
+                      <div className="picker-modal picker-modal-time" id="booking-time-popover" role="dialog" aria-modal="true" aria-label="Pilih jam selesai">
+                        <div className="picker-modal-header"><span className="step-kicker">Pilih jam selesai</span><button type="button" className="picker-modal-close" aria-label="Tutup pemilih jam" title="Tutup" onClick={() => setOpenPicker(null)}><XIcon size={18} aria-hidden="true" /></button></div>
+                        <AnalogTimePicker value={form.endTime} onChange={(value) => updateField('endTime', value)} onComplete={() => setOpenPicker(null)} />
+                      </div>
+                    </div>}
+                    {errors.endTime && <small id="end-time-error" className="field-error" role="alert">{errors.endTime}</small>}
+                  </div>
                 </div>
-                <div className="date-details">
+                {form.date && <div className="date-details">
                   <CalendarAvailability selectedDate={form.date} availability={calendarAvailability} />
-                  <fieldset className="detail-group">
-                    <div className="field" id="field-endTime">
-                      <AnalogTimePicker value={form.endTime} onChange={(v) => updateField('endTime', v)} />
-                      {errors.endTime && <small id="end-time-error" className="field-error" role="alert">{errors.endTime}</small>}
-                    </div>
-                  </fieldset>
-                </div>
+                </div>}
               </div>
 
             </>}
@@ -528,41 +552,11 @@ export default function BookingPage() {
             </>}
           </div>
 
-          <aside className="summary-panel" aria-label="Ringkasan booking">
-            <div className="summary-top">
-              <div>
-                <span className="eyebrow">Ringkasan booking</span>
-
-              </div>
-              <span className="pending-pill">Menunggu konfirmasi</span>
-            </div>
-            <div className="summary-service">
-              <span className="summary-number">01</span>
-              <div className="summary-service-content">
-                <span className="summary-label">Layanan</span>
-                <strong>{form.serviceItems.map((item) => {
-                  const service = services.find((current) => current.id === item.id)
-                  return service ? `${service.name} × ${item.qty}` : ''
-                }).join(', ') || 'Belum memilih layanan'}</strong>
-                <small>{form.serviceItems.length
-                  ? `Total ${formatPrice(form.serviceItems.reduce((sum, item) => {
-                      const service = services.find((current) => current.id === item.id)
-                      return sum + (service ? service.price * item.qty : 0)
-                    }, 0))}`
-                  : 'Total akan muncul setelah memilih layanan'}</small>
-              </div>
-            </div>
-            <dl>
-              <div><dt>Tanggal</dt><dd>{formatDayLabel(form.date)}</dd></div>
-              <div><dt>Jam selesai</dt><dd>{form.endTime || 'Belum diusulkan'}</dd></div>
-              <div><dt>Lokasi</dt><dd>{form.address || 'Belum diisi'}</dd></div>
-            </dl>
-          </aside>
 
           <div className="form-actions">
             {step > 1 && <button type="button" className="button button-secondary" disabled={navigationLoading} onClick={goToPreviousStep}><ArrowLeftIcon size={16} weight="bold" aria-hidden="true" /> Kembali</button>}
             <div className="form-actions-main">
-              {step < 4 ? <button type="button" className="button button-primary" disabled={navigationLoading} onClick={nextStep}>{navigationLoading ? <><span className="spinner" aria-hidden="true" /> Memproses...</> : <>{step === 1 ? 'Lanjut pilih tanggal' : step === 2 ? 'Lanjut isi detail' : 'Tinjau pengajuan'} <ArrowRightIcon size={16} weight="bold" aria-hidden="true" /></>}</button> : <button type="submit" className="button button-primary" disabled={submitState.status === 'loading' || navigationLoading}>{submitState.status === 'loading' ? 'Mengirim...' : 'Kirim pengajuan booking'} <ArrowUpRightIcon size={16} weight="bold" aria-hidden="true" /></button>}
+              {step < 4 ? <button type="button" className="button button-primary" disabled={navigationLoading} onClick={nextStep}>{navigationLoading ? <><span className="spinner" aria-hidden="true" /> Memproses...</> : <>Lanjut <ArrowRightIcon size={16} weight="bold" aria-hidden="true" /></>}</button> : <button type="submit" className="button button-primary" disabled={submitState.status === 'loading' || navigationLoading}>{submitState.status === 'loading' ? 'Mengirim...' : 'Kirim pengajuan booking'} <ArrowUpRightIcon size={16} weight="bold" aria-hidden="true" /></button>}
             </div>
           </div>
         </form>
@@ -581,11 +575,6 @@ function formatBusyTime(value) {
   return new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value))
 }
 
-function formatDayLabel(value) {
-  if (!value) return 'Belum dipilih'
-  const date = new Date(value + 'T00:00:00')
-  return new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date)
-}
 
 function CalendarAvailability({ selectedDate, availability }) {
   if (!selectedDate) return null

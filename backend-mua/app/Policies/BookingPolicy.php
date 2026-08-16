@@ -29,6 +29,6 @@ class BookingPolicy
 
     public function assignStaff(User $user, Booking $booking): bool
     {
-        return $this->viewAny($user);
+        return $user->is_active && in_array($user->role, ['owner', 'admin'], true);
     }
 }

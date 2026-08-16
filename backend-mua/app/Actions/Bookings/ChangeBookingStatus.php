@@ -12,7 +12,7 @@ class ChangeBookingStatus
 {
     public function __construct(private RecordActivity $recordActivity) {}
 
-    public function handle(Booking $booking, User $actor, string $status): Booking
+    public function handle(Booking $booking, ?User $actor, string $status): Booking
     {
         return DB::transaction(function () use ($booking, $actor, $status): Booking {
             $booking = Booking::query()->lockForUpdate()->findOrFail($booking->id);
@@ -51,8 +51,7 @@ class ChangeBookingStatus
         }
 
         if ($status === 'confirmed' && (
-            $booking->user_id === null
-            || $booking->starts_at === null
+            $booking->starts_at === null
             || $booking->ends_at === null
             || ! $booking->transactions()
                 ->whereIn('transaction_status', ['capture', 'settlement'])

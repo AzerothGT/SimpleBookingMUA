@@ -58,6 +58,7 @@ export const updateAdminBooking = (id, body) => apiClient.patch(`/bookings/${id}
 export const deleteAdminBooking = (id) => apiClient.delete(`/bookings/${id}`)
 export const changeAdminBookingStatus = (id, status) => apiClient.patch(`/bookings/${id}/status`, { status })
 export const assignAdminBooking = (id, body) => apiClient.post(`/bookings/${id}/assign-staff`, body)
+export const createAdminPaymentLink = (id) => apiClient.post(`/bookings/${id}/payment-link`, {})
 export const listAdminUsers = () => apiClient.get('/users')
 
 export const listAdminServices = () => apiClient.get('/services')

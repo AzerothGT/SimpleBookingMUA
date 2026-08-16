@@ -8,7 +8,7 @@ function parseValue(value) {
   return { hours24: h % 24, minutes: m }
 }
 
-export default function AnalogTimePicker({ value, onChange }) {
+export default function AnalogTimePicker({ value, onChange, onComplete }) {
   const parsed = parseValue(value)
   const [mode, setMode] = useState('hour')
 
@@ -28,6 +28,7 @@ export default function AnalogTimePicker({ value, onChange }) {
       setMode('minute')
     } else {
       commit(hours24, (n * 5) % 60)
+      onComplete?.()
     }
   }
 
@@ -54,8 +55,8 @@ export default function AnalogTimePicker({ value, onChange }) {
         <div className="atp-face">
           {NUMBERS.map((n) => {
             const angle = (n * 30 - 90) * (Math.PI / 180)
-            const x = 74 + Math.cos(angle) * 55
-            const y = 74 + Math.sin(angle) * 55
+            const x = 110 + Math.cos(angle) * 85
+            const y = 110 + Math.sin(angle) * 85
             const selectedNumber = mode === 'hour' ? displayHour : minutes / 5 || 12
             return (
               <button

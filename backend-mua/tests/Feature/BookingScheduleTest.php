@@ -28,6 +28,16 @@ it('requires a complete final schedule', function () {
         ->assertJsonValidationErrors(['starts_at', 'ends_at']);
 });
 
+it('prevents staff actors from assigning schedules', function () {
+    $actor = User::factory()->staff()->create();
+    $staff = User::factory()->staff()->create();
+    $booking = Booking::factory()->unassigned()->create();
+
+    $this->withToken($actor->createToken('test', ['*'], now()->addDays(30))->plainTextToken)
+        ->postJson('/api/bookings/'.$booking->id.'/assign-staff', schedulePayload($staff))
+        ->assertForbidden();
+});
+
 it('rejects inactive staff', function () {
     $booking = Booking::factory()->unassigned()->create();
     $staff = User::factory()->staff()->inactive()->create();
@@ -39,7 +49,8 @@ it('rejects inactive staff', function () {
 });
 
 it('assigns a valid schedule and records the adjustment', function () {
-    ['user' => $actor, 'token' => $token] = authenticatedSession();
+    $actor = User::factory()->admin()->create();
+    $token = $actor->createToken('test', ['*'], now()->addDays(30))->plainTextToken;
     $booking = Booking::factory()->unassigned()->create();
     $staff = User::factory()->staff()->create();
 

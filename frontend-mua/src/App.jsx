@@ -3,7 +3,8 @@ import './App.css'
 import Home from './pages/user/Home'
 import Services from './pages/user/Services'
 import BookingPage from './pages/user/BookingPage'
-import MyBookings from './pages/user/MyBookings'
+import PaymentPage from './pages/user/PaymentPage'
+
 import AdminDashboard from './pages/admin/AdminDashboard'
 import ActivityLogsPage from './pages/admin/ActivityLogsPage'
 import BookingsPage from './pages/admin/BookingsPage'
@@ -23,7 +24,8 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/services" element={<Services />} />
         <Route path="/booking" element={<BookingPage />} />
-        <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/payment" element={<PaymentPage />} />
+
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
           <Route path="/admin" element={<AdminDashboard />} />

@@ -63,7 +63,6 @@ class HandleMidtransWebhook
             if (in_array($transaction->transaction_status, ['capture', 'settlement'], true)
                 && $transaction->fraud_status === 'accept'
                 && $transaction->booking->isPending()
-                && $transaction->booking->user_id !== null
                 && $transaction->booking->starts_at !== null
                 && $transaction->booking->ends_at !== null) {
                 $this->changeBookingStatus->handle(

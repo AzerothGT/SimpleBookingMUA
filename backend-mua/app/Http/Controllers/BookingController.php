@@ -20,6 +20,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 
 class BookingController extends Controller
@@ -131,6 +133,22 @@ class BookingController extends Controller
             'transactions',
             'activityLogs.user',
         ]));
+    }
+
+    public function paymentLink(Booking $booking): JsonResponse
+    {
+        Gate::authorize('view', $booking);
+
+        $token = Str::random(64);
+        $booking->update([
+            'payment_access_token_hash' => Hash::make($token),
+            'payment_access_token_expires_at' => now()->addDays(30),
+        ]);
+
+        return response()->json([
+            'booking_id' => $booking->id,
+            'payment_access_token' => $token,
+        ]);
     }
 
     #[OA\Put(

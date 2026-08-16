@@ -18,9 +18,9 @@ class CreateSnapTransaction
         private RecordActivity $recordActivity,
     ) {}
 
-    public function handle(Booking $booking, ?User $actor): Transaction
+    public function handle(Booking $booking, ?User $actor, string $type = 'dp', ?int $grossAmount = null): Transaction
     {
-        return DB::transaction(function () use ($booking, $actor): Transaction {
+        return DB::transaction(function () use ($booking, $actor, $type, $grossAmount): Transaction {
             $booking = Booking::query()->with('bookingServices.service')->lockForUpdate()->findOrFail($booking->id);
 
             if (in_array($booking->status, ['cancelled', 'done'], true)) {
@@ -29,8 +29,15 @@ class CreateSnapTransaction
                 ]);
             }
 
+            if (! in_array($type, ['dp', 'pelunasan'], true)) {
+                throw ValidationException::withMessages([
+                    'type' => 'The payment type is invalid.',
+                ]);
+            }
+
             $existingTransaction = $booking->transactions()
-                ->where('transaction_status', 'pending')
+                ->where('type', $type)
+                ->whereIn('transaction_status', ['pending', 'capture', 'settlement'])
                 ->latest()
                 ->first();
 
@@ -38,7 +45,7 @@ class CreateSnapTransaction
                 return $existingTransaction;
             }
 
-            $grossAmount = (int) round($booking->bookingServices->sum(fn ($bs) => (float) $bs->service->price * $bs->qty));
+            $grossAmount ??= (int) round($booking->bookingServices->sum(fn ($bs) => (float) $bs->service->price * $bs->qty));
             if ($grossAmount <= 0) {
                 throw ValidationException::withMessages([
                     'gross_amount' => 'The gross amount must be greater than zero.',

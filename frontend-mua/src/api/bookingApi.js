@@ -31,8 +31,8 @@ export function getPublicBookingStatus(id, token) {
   return apiClient.get(`/public/bookings/${encodeURIComponent(id)}/status?token=${encodeURIComponent(token)}`, { auth: false })
 }
 
-export function createPublicSnapTransaction(id, token) {
-  return apiClient.post(`/public/bookings/${encodeURIComponent(id)}/transactions/snap?token=${encodeURIComponent(token)}`, {}, { auth: false })
+export function createPublicSnapTransaction(id, token, type = 'dp') {
+  return apiClient.post(`/public/bookings/${encodeURIComponent(id)}/transactions/snap?token=${encodeURIComponent(token)}&type=${encodeURIComponent(type)}`, {}, { auth: false })
 }
 
 let snapLoader
