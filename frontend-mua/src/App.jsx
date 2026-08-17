@@ -38,7 +38,7 @@ export default function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/bookings" element={<BookingsPage />} />
           <Route path="/admin/services" element={<ServicesPage />} />
-          <Route element={<RequireRole allow={['owner', 'admin']} />}>
+          <Route element={<RequireRole allow={['admin']} />}>
             <Route path="/admin/users" element={<UsersPage />} />
             <Route path="/admin/activity" element={<ActivityLogsPage />} />
           </Route>

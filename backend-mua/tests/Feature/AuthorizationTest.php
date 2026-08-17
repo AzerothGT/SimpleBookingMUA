@@ -10,13 +10,13 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('restricts user management to owner and admin', function (string $role, int $status) {
+it('restricts user management to superadmin', function (string $role, int $status) {
     $this->withToken(tokenForRole($role))
         ->getJson('/api/users')
         ->assertStatus($status);
 })->with([
-    'owner' => ['owner', 200],
     'admin' => ['admin', 200],
+    'owner' => ['owner', 403],
     'staff' => ['staff', 403],
 ]);
 
@@ -34,7 +34,7 @@ it('restricts service writes to owner and admin', function (string $role, int $s
     'staff' => ['staff', 403],
 ]);
 
-it('prevents admins from creating or promoting owners', function () {
+it('allows superadmins to create and promote every role', function () {
     $token = tokenForRole('admin');
 
     $this->withToken($token)
@@ -44,13 +44,13 @@ it('prevents admins from creating or promoting owners', function () {
             'password' => 'secret-password',
             'role' => 'owner',
         ])
-        ->assertForbidden();
+        ->assertCreated();
 
     $staff = User::factory()->staff()->create();
 
     $this->withToken($token)
         ->patchJson('/api/users/'.$staff->id, ['role' => 'owner'])
-        ->assertForbidden();
+        ->assertSuccessful();
 });
 
 it('allows every internal role to access booking operations', function (string $role) {
@@ -69,15 +69,15 @@ it('allows every internal role to view booking transactions', function (string $
         ->assertSuccessful();
 })->with(['owner', 'admin', 'staff']);
 
-it('restricts activity logs to owner and admin', function (string $role, int $status) {
+it('restricts activity logs to superadmin', function (string $role, int $status) {
     ActivityLog::factory()->create();
 
     $this->withToken(tokenForRole($role))
         ->getJson('/api/activity-logs')
         ->assertStatus($status);
 })->with([
-    'owner' => ['owner', 200],
     'admin' => ['admin', 200],
+    'owner' => ['owner', 403],
     'staff' => ['staff', 403],
 ]);
 

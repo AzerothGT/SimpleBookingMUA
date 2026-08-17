@@ -22,7 +22,7 @@ export default function UsersPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const session = getStoredSession()
   const currentUserId = session?.user?.id
-  const isOwner = session?.user?.role === 'owner'
+
 
   const loadUsers = useCallback(async () => { setIsLoading(true); setError(''); try { setRows(unwrapList(await listAdminUsers(filters))) } catch (requestError) { setError(getError(requestError)) } finally { setIsLoading(false) } }, [filters])
   useEffect(() => { loadUsers() }, [loadUsers])
@@ -57,18 +57,17 @@ export default function UsersPage() {
     { key: 'is_active', label: 'Status', render: (row) => <span className={`text-status ${row.is_active ? 'is-active' : 'is-inactive'}`}>{row.is_active ? 'Aktif' : 'Nonaktif'}</span> },
     { key: 'created_at', label: 'Dibuat', render: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
     { key: 'actions', label: 'Aksi', render: (row) => {
-      if (row.role === 'owner' && !isOwner) return <span className="text-muted">—</span>
       return <div className="table-actions">
         <button className="table-action" type="button" onClick={() => openEdit(row)}><PencilSimpleIcon size={15} /> Edit</button>
         <button className="table-action table-action-danger" type="button" disabled={row.id === currentUserId} onClick={() => { openEdit(row); setConfirmOpen(true) }}><TrashIcon size={15} /> Hapus</button>
       </div>
     } },
-  ], [currentUserId, isOwner])
+  ], [currentUserId])
 
-  return <AdminLayout title="Pengguna" description="Kelola akun tim dan hak aksesnya (khusus owner & admin)." onRefresh={loadUsers} isLoading={isLoading} action={<button className="admin-button admin-button-primary" type="button" onClick={openCreate}><PlusIcon size={16} /> Pengguna baru</button>}>
+  return <AdminLayout title="Pengguna" description="Kelola akun tim dan hak aksesnya (khusus superadmin)." onRefresh={loadUsers} isLoading={isLoading} action={<button className="admin-button admin-button-primary" type="button" onClick={openCreate}><PlusIcon size={16} /> Pengguna baru</button>}>
     <div className="admin-toolbar"><div><span className="eyebrow">Manajemen tim</span><h2>Daftar pengguna</h2></div><div className="admin-filters">
       <select value={filters.role} onChange={(event) => setFilters({ ...filters, role: event.target.value })} aria-label="Filter role">
-        <option value="">Semua role</option><option value="admin">Admin</option><option value="staff">Staff</option>{isOwner && <option value="owner">Owner</option>}
+        <option value="">Semua role</option><option value="admin">Admin</option><option value="staff">Staff</option><option value="owner">Owner</option>
       </select>
       <select value={filters.is_active} onChange={(event) => setFilters({ ...filters, is_active: event.target.value })} aria-label="Filter status">
         <option value="">Semua status</option><option value="1">Aktif</option><option value="0">Nonaktif</option>
@@ -87,8 +86,8 @@ export default function UsersPage() {
         <label className="admin-field"><span>Instagram URL</span><input type="url" value={form.instagram_url} onChange={(event) => setForm({ ...form, instagram_url: event.target.value })} placeholder="https://instagram.com/username" /></label>
         <label className="admin-field"><span>Password{editing ? ' (kosongkan jika tidak diubah)' : ''}</span><input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} minLength={8} required={!editing} /></label>
         <label className="admin-field"><span>Role</span>
-          <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} disabled={editing?.role === 'owner' && !isOwner}>
-            <option value="staff">Staff</option><option value="admin">Admin</option>{isOwner && <option value="owner">Owner</option>}
+          <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} disabled={editing?.id === currentUserId}>
+            <option value="staff">Staff</option><option value="admin">Admin</option><option value="owner">Owner</option>
           </select>
         </label>
         <label className="admin-check"><input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} /> Akun aktif</label>

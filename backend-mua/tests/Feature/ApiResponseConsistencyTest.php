@@ -33,7 +33,7 @@ it('returns a message-only envelope for auth and lookup failures', function (str
 ]);
 
 it('never exposes credentials or session tokens in user payloads', function () {
-    $token = tokenForRole('owner');
+    $token = tokenForRole('admin');
     $staff = User::factory()->staff()->create();
 
     $payloads = [
@@ -75,7 +75,7 @@ it('hides internal relations from the public booking response', function () {
 it('keeps activity log payloads free of raw morph columns', function () {
     $log = ActivityLog::factory()->create();
 
-    $payload = $this->withToken(tokenForRole('owner'))
+    $payload = $this->withToken(tokenForRole('admin'))
         ->getJson('/api/activity-logs/'.$log->id)
         ->assertSuccessful()
         ->json();

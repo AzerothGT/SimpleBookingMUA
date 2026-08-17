@@ -29,7 +29,7 @@ it('records public booking creation as a system activity', function () {
 
 it('records user creation with the authenticated actor', function () {
     ['user' => $actor, 'token' => $token] = authenticatedSession();
-    $actor->update(['role' => 'owner']);
+    $actor->update(['role' => 'admin']);
 
     $response = $this->withToken($token)->postJson('/api/users', [
         'name' => 'Staff Baru',
@@ -47,7 +47,7 @@ it('records user creation with the authenticated actor', function () {
 
 it('records user updates and deactivation with before and after metadata', function () {
     ['user' => $actor, 'token' => $token] = authenticatedSession();
-    $actor->update(['role' => 'owner']);
+    $actor->update(['role' => 'admin']);
     $staff = User::factory()->staff()->create(['name' => 'Old Name']);
 
     $this->withToken($token)

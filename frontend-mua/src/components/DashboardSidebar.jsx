@@ -6,13 +6,13 @@ const links = [
   { to: '/admin', label: 'Dashboard', icon: HouseIcon, end: true },
   { to: '/admin/bookings', label: 'Booking', icon: CalendarCheckIcon },
   { to: '/admin/services', label: 'Layanan', icon: PaintBrushIcon },
-  { to: '/admin/users', label: 'Pengguna', icon: UsersIcon, ownerOnly: true },
-  { to: '/admin/activity', label: 'Aktivitas', icon: ListBulletsIcon, ownerOnly: true },
+  { to: '/admin/users', label: 'Pengguna', icon: UsersIcon, adminOnly: true },
+  { to: '/admin/activity', label: 'Aktivitas', icon: ListBulletsIcon, adminOnly: true },
 ]
 
 export default function DashboardSidebar({ role, userName }) {
   const navigate = useNavigate()
-  const visibleLinks = role === 'staff' ? links.filter((link) => !link.ownerOnly) : links
+  const visibleLinks = links.filter((link) => !link.adminOnly || role === 'admin')
 
   const handleLogout = () => {
     clearSession()

@@ -8,7 +8,7 @@ class UserPolicy
 {
     public function viewAny(User $actor): bool
     {
-        return in_array($actor->role, ['owner', 'admin'], true);
+        return $actor->role === 'admin';
     }
 
     public function view(User $actor, User $user): bool
@@ -23,12 +23,12 @@ class UserPolicy
 
     public function assignRole(User $actor, string $role): bool
     {
-        return $actor->role === 'owner' || ($actor->role === 'admin' && $role !== 'owner');
+        return $actor->role === 'admin';
     }
 
     public function update(User $actor, User $user): bool
     {
-        return $actor->role === 'owner' || ($actor->role === 'admin' && $user->role !== 'owner');
+        return $actor->role === 'admin';
     }
 
     public function delete(User $actor, User $user): bool

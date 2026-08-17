@@ -9,7 +9,7 @@ class ActivityLogPolicy
 {
     public function viewAny(User $user): bool
     {
-        return in_array($user->role, ['owner', 'admin'], true);
+        return $user->role === 'admin';
     }
 
     public function view(User $user, ActivityLog $activityLog): bool
