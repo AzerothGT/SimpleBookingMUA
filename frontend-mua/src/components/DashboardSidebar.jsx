@@ -1,4 +1,4 @@
-import { CalendarCheckIcon, HouseIcon, ListBulletsIcon, PaintBrushIcon, SignOutIcon } from '@phosphor-icons/react'
+import { CalendarCheckIcon, HouseIcon, ListBulletsIcon, PaintBrushIcon, SignOutIcon, UsersIcon } from '@phosphor-icons/react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { clearSession } from '../session'
 
@@ -6,6 +6,7 @@ const links = [
   { to: '/admin', label: 'Dashboard', icon: HouseIcon, end: true },
   { to: '/admin/bookings', label: 'Booking', icon: CalendarCheckIcon },
   { to: '/admin/services', label: 'Layanan', icon: PaintBrushIcon },
+  { to: '/admin/users', label: 'Pengguna', icon: UsersIcon, ownerOnly: true },
   { to: '/admin/activity', label: 'Aktivitas', icon: ListBulletsIcon, ownerOnly: true },
 ]
 
