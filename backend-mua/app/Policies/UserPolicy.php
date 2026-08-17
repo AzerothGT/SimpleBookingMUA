@@ -23,7 +23,7 @@ class UserPolicy
 
     public function assignRole(User $actor, string $role): bool
     {
-        return $actor->role === 'admin';
+        return $actor->role === 'admin' && $role !== 'admin';
     }
 
     public function update(User $actor, User $user): bool

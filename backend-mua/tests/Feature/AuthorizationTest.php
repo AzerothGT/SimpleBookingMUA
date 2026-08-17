@@ -34,7 +34,7 @@ it('restricts service writes to owner and admin', function (string $role, int $s
     'staff' => ['staff', 403],
 ]);
 
-it('allows superadmins to create and promote every role', function () {
+it('allows admins to manage owner and staff but not admin roles', function () {
     $token = tokenForRole('admin');
 
     $this->withToken($token)
@@ -51,6 +51,16 @@ it('allows superadmins to create and promote every role', function () {
     $this->withToken($token)
         ->patchJson('/api/users/'.$staff->id, ['role' => 'owner'])
         ->assertSuccessful();
+
+    $this->withToken($token)
+        ->postJson('/api/users', [
+            'name' => 'New Admin',
+            'username' => 'new-admin',
+            'password' => 'secret-password',
+            'role' => 'admin',
+        ])
+        ->assertForbidden();
+
 });
 
 it('allows every internal role to access booking operations', function (string $role) {

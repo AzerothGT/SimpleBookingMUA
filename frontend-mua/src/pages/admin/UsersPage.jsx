@@ -87,7 +87,7 @@ export default function UsersPage() {
         <label className="admin-field"><span>Password{editing ? ' (kosongkan jika tidak diubah)' : ''}</span><input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} minLength={8} required={!editing} /></label>
         <label className="admin-field"><span>Role</span>
           <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })} disabled={editing?.id === currentUserId}>
-            <option value="staff">Staff</option><option value="admin">Admin</option><option value="owner">Owner</option>
+            <option value="staff">Staff</option>{editing?.role === 'admin' && <option value="admin">Admin</option>}<option value="owner">Owner</option>
           </select>
         </label>
         <label className="admin-check"><input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} /> Akun aktif</label>
