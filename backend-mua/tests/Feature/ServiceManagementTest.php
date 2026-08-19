@@ -114,3 +114,39 @@ it('rejects moving an image to another service', function () {
 
     expect($image->fresh()->service_id)->toBe($service->id);
 });
+
+it('accepts an external https image URL', function () {
+    $service = Service::factory()->create();
+
+    $this->withToken(tokenForRole('admin'))
+        ->postJson("/api/services/{$service->id}/serviceImages", [
+            'image_url' => 'https://images.example.test/service.jpg',
+            'image_source' => 'external',
+        ])
+        ->assertCreated()
+        ->assertJsonPath('image_url', 'https://images.example.test/service.jpg');
+});
+
+it('rejects uploaded service images', function () {
+    $service = Service::factory()->create();
+
+    $this->withToken(tokenForRole('admin'))
+        ->postJson("/api/services/{$service->id}/serviceImages", [
+            'image_url' => 'https://images.example.test/service.jpg',
+            'image_source' => 'upload',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('image_source');
+});
+
+it('rejects non-http external image URLs', function () {
+    $service = Service::factory()->create();
+
+    $this->withToken(tokenForRole('admin'))
+        ->postJson("/api/services/{$service->id}/serviceImages", [
+            'image_url' => 'javascript:alert(1)',
+            'image_source' => 'external',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('image_url');
+});

@@ -58,6 +58,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() === 'mysql') {
+            DB::unprepared('DROP TRIGGER IF EXISTS service_images_one_cover_insert');
+            DB::unprepared('DROP TRIGGER IF EXISTS service_images_one_cover_update');
+        }
+
         Schema::dropIfExists('service_images');
     }
 };
