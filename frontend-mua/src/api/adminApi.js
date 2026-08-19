@@ -69,5 +69,9 @@ export const createAdminService = (body) => apiClient.post('/services', body)
 export const updateAdminService = (id, body) => apiClient.patch(`/services/${id}`, body)
 export const deleteAdminService = (id) => apiClient.delete(`/services/${id}`)
 
+export const createServiceImage = (serviceId, body) => apiClient.post(`/services/${serviceId}/serviceImages`, body)
+export const updateServiceImage = (serviceId, imageId, body) => apiClient.put(`/services/${serviceId}/serviceImages/${imageId}`, body)
+export const deleteServiceImage = (serviceId, imageId) => apiClient.delete(`/services/${serviceId}/serviceImages/${imageId}`)
+
 export const listActivityLogs = (filters = {}) => apiClient.get(`/activity-logs${queryString(filters)}`)
 export const getActivityLog = (id) => apiClient.get(`/activity-logs/${id}`)

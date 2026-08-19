@@ -99,6 +99,16 @@
   .detail-group legend em { @apply font-body text-[.6875rem] font-medium not-italic normal-case tracking-normal; color: var(--muted); }
   .service-list { @apply grid gap-2; grid-template-columns: 1fr; }
   .service-option { @apply flex min-h-[58px] items-center gap-3 border bg-[var(--paper)] px-3 py-2 transition; border-color: transparent; }
+  .service-card-slider { @apply relative w-full overflow-hidden; touch-action: pan-y; }
+  .service-card-track { @apply flex w-full; transition: transform .35s cubic-bezier(.22,.61,.36,1); will-change: transform; }
+  .service-card-image { @apply block aspect-[16/9] w-full shrink-0 object-cover; border: 1px solid var(--line); background: var(--surface); user-select: none; }
+  .service-card-arrow { @apply absolute top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center border-0 bg-[rgba(37,48,43,.72)] text-white transition; }
+  .service-card-arrow:hover { @apply bg-[var(--green)]; }
+  .service-card-arrow-previous { @apply left-2; }
+  .service-card-arrow-next { @apply right-2; }
+  .service-card-dots { @apply absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-[rgba(37,48,43,.62)] px-2 py-1; }
+  .service-card-dot { @apply h-1.5 w-1.5 rounded-full border-0 bg-white/60 p-0 transition; }
+  .service-card-dot.is-active { @apply bg-white; }
   .service-option:hover, .service-option.selected { @apply border-[var(--green)] bg-[#f1f5e9]; }
   .service-checkbox { @apply sr-only; }
   .service-check { @apply relative flex h-[18px] w-[18px] shrink-0 items-center justify-center border-2 transition; border-color: var(--line); background: var(--surface); }
@@ -604,9 +614,21 @@
 .drawer-close:hover { color: var(--ink); }
 .admin-modal-overlay, .admin-dialog-overlay { display: none; place-items: center; padding: 1.25rem; }
 .admin-modal-overlay.is-open { display: grid; }
-.admin-modal { position: relative; width: min(100%, 30rem); padding: 2rem; border: 1px solid var(--line); background: var(--surface); }
+.admin-modal { position: relative; width: min(100%, 30rem); max-height: calc(100vh - 2.5rem); overflow-y: auto; padding: 2rem; border: 1px solid var(--line); background: var(--surface); }
 .admin-modal > .drawer-close { position: absolute; top: .75rem; right: .75rem; }
 .modal-delete { margin-top: 1rem; }
+.service-image-manager { display: grid; gap: .75rem; margin-top: 1.25rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.service-image-empty, .service-image-hint { margin: 0; color: var(--muted); font-size: .68rem; }
+.service-image-hint { margin-top: 1rem; }
+.service-image-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr)); gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.service-image-item { display: grid; gap: .35rem; }
+.service-image-item img { width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--line); background: var(--surface); }
+.service-image-item.is-cover img { border-color: var(--green); outline: 1px solid var(--green); }
+.service-image-meta { display: flex; align-items: center; justify-content: space-between; gap: .35rem; }
+.service-image-cover { color: var(--green); font: .6rem var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.service-image-add { display: flex; gap: .5rem; }
+.service-image-add input { flex: 1; min-width: 0; min-height: 2.6rem; border: 1px solid var(--line); padding: .65rem .7rem; background: var(--surface); color: var(--ink); font: .72rem var(--font-body); outline: 0; }
+.service-image-add input:focus { border-color: var(--green); }
 .admin-dialog-overlay { display: grid; }
 .admin-dialog { position: relative; width: min(100%, 28rem); padding: 2rem; border: 1px solid var(--line); background: var(--surface); text-align: center; }
 .admin-dialog > .drawer-close { position: absolute; top: .5rem; right: .5rem; }
