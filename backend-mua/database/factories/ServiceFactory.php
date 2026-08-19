@@ -14,6 +14,7 @@ class ServiceFactory extends Factory
     {
         return [
             'name' => fake()->sentence(3),
+            'description' => fake()->optional()->paragraph(),
             'price' => fake()->randomFloat(2, 100000, 5000000),
             'is_active' => true,
         ];

@@ -104,6 +104,8 @@ Semua password `password123`.
 
 `db:seed` tidak idempotent (username UNIQUE). Untuk reset: `php artisan migrate:fresh --seed`.
 
+> **Catatan role.** Manajemen user dan audit trail (`activity-logs`) saat ini **khusus `admin`** (lihat `UserPolicy`/`ActivityLogPolicy`), sedangkan penjadwalan staff dan pengelolaan service terbuka untuk `owner|admin`. `admin` juga tidak bisa memberikan role `admin` ke user lain (`assignRole`).
+
 ## Dokumentasi API
 
 | Endpoint | Isi |
@@ -164,7 +166,7 @@ Token dianggap valid bila belum expired dan user `is_active`. `POST /api/logout`
 |---|---|---|
 | `GET` | `/api/user` | User yang sedang login |
 | `POST` | `/api/logout` | Cabut token |
-| `GET·POST·PATCH·DELETE` | `/api/users[/{user}]` | Manajemen user (owner/admin) |
+| `GET·POST·PATCH·DELETE` | `/api/users[/{user}]` | Manajemen user (admin) |
 | `POST·PATCH·DELETE` | `/api/services[/{service}]` | Kelola service (owner/admin) |
 | `POST·PATCH·DELETE` | `/api/services/{service}/serviceImages[/{image}]` | Kelola foto service |
 | `GET·PATCH·DELETE` | `/api/bookings[/{booking}]` | Kelola booking |
@@ -172,7 +174,7 @@ Token dianggap valid bila belum expired dan user `is_active`. `POST /api/logout`
 | `PATCH` | `/api/bookings/{booking}/status` | Ubah status |
 | `GET` | `/api/bookings/{booking}/transactions` | Riwayat pembayaran |
 | `POST` | `/api/bookings/{booking}/transactions/snap` | Buat Snap transaction |
-| `GET` | `/api/activity-logs[/{log}]` | Audit trail (owner/admin) |
+| `GET` | `/api/activity-logs[/{log}]` | Audit trail (admin) |
 
 Daftar lengkap: `php artisan route:list --path=api`.
 
@@ -238,7 +240,7 @@ vendor/bin/pint --test
 
 ## Status
 
-137 test lulus, 691 assertion (7 skipped — MySQL-only schema tests).
+142 test lulus, 706 assertion (7 skipped — MySQL-only schema tests).
 
 Belum ada: frontend, refund flow, notifikasi WhatsApp/email, ownership scoping booking per staff (setiap user aktif saat ini bisa mengubah booking mana pun).
 

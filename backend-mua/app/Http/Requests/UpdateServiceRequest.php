@@ -10,6 +10,7 @@ class UpdateServiceRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'price' => ['sometimes', 'numeric', 'min:0'],
             'is_active' => ['boolean'],
         ];

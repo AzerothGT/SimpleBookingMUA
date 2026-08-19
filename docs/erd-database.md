@@ -42,6 +42,7 @@ erDiagram
     services {
         uuid id PK
         varchar name
+        text description "opsional"
         decimal price
         boolean is_active
         timestamp created_at
@@ -322,7 +323,7 @@ Staff set datang `12:30`, selesai `15:00` → overlap dicek saat staff save.
 - Logout: hapus row token
 - Skip JWT — opaque token Sanctum di DB cukup; ganti JWT kalau stateless scale butuh
 - `users.instagram_url` — opsional
-- `services`: name, price — **tanpa duration**; foto di `service_images` (1—N, upload atau link eksternal, satu `is_cover`)
+- `services`: name, description (opsional), price — **tanpa duration**; foto di `service_images` (1—N, upload atau link eksternal, satu `is_cover`)
 - `booking_service`: pivot booking ↔ service dengan `qty` (jumlah orang); pair `(booking_id, service_id)` unik
 - Durasi aktual = `ends_at - starts_at` setelah staff set
 - Client di `bookings`: tanggal, jam selesai usulan, alamat, maps

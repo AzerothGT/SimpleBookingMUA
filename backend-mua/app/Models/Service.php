@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['name', 'price', 'is_active'])]
+#[Fillable(['name', 'description', 'price', 'is_active'])]
 class Service extends Model
 {
     public const UPDATED_AT = null;

@@ -53,7 +53,7 @@ it('limits public service payloads to catalogue fields', function () {
     $service = Service::factory()->create(['is_active' => true]);
 
     expect(array_keys($this->getJson('/api/services/'.$service->id)->assertSuccessful()->json()))
-        ->toEqualCanonicalizing(['id', 'name', 'price', 'is_active', 'created_at', 'images']);
+        ->toEqualCanonicalizing(['id', 'name', 'description', 'price', 'is_active', 'created_at', 'images']);
 });
 
 it('hides internal relations from the public booking response', function () {

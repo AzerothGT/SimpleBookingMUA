@@ -67,6 +67,39 @@ it('switches the service cover atomically', function () {
         ->and($service->serviceImages()->where('is_cover', true)->count())->toBe(1);
 });
 
+it('stores and returns the service description', function () {
+    $this->withToken(tokenForRole('admin'))
+        ->postJson('/api/services', [
+            'name' => 'Wedding Makeup',
+            'description' => 'Riasan pengantin lengkap dengan touch-up.',
+            'price' => 1_500_000,
+        ])
+        ->assertCreated()
+        ->assertJsonPath('description', 'Riasan pengantin lengkap dengan touch-up.');
+});
+
+it('includes inactive services for authenticated owner and admin', function (string $role) {
+    $active = Service::factory()->create(['is_active' => true]);
+    $inactive = Service::factory()->inactive()->create();
+
+    $this->withToken(tokenForRole($role))
+        ->getJson('/api/services?include_inactive=1')
+        ->assertSuccessful()
+        ->assertJsonFragment(['id' => $active->id])
+        ->assertJsonFragment(['id' => $inactive->id]);
+})->with(['owner', 'admin']);
+
+it('hides inactive services from staff even with include_inactive', function () {
+    $active = Service::factory()->create(['is_active' => true]);
+    $inactive = Service::factory()->inactive()->create();
+
+    $this->withToken(tokenForRole('staff'))
+        ->getJson('/api/services?include_inactive=1')
+        ->assertSuccessful()
+        ->assertJsonFragment(['id' => $active->id])
+        ->assertJsonMissing(['id' => $inactive->id]);
+});
+
 it('rejects moving an image to another service', function () {
     $service = Service::factory()->create();
     $otherService = Service::factory()->create();
