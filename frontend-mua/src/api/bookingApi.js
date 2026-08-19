@@ -49,7 +49,9 @@ export function loadMidtransSnap() {
     }
 
     const script = document.createElement('script')
-    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
+    const isProduction = import.meta.env.VITE_MIDTRANS_IS_PRODUCTION === 'true'
+    const snapHost = isProduction ? 'https://app.midtrans.com' : 'https://app.sandbox.midtrans.com'
+    script.src = `${snapHost}/snap/snap.js`
     script.dataset.clientKey = clientKey
     script.onload = () => window.snap ? resolve(window.snap) : reject(new Error('Midtrans Snap gagal dimuat.'))
     script.onerror = () => reject(new Error('Midtrans Snap gagal dimuat.'))

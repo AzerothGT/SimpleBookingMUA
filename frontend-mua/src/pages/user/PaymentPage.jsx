@@ -64,8 +64,14 @@ export default function PaymentPage() {
       const payload = await createPublicSnapTransaction(bookingId, token, type)
       const transaction = unwrap(payload)
       if (transaction.snap_token) {
-        const snap = await loadMidtransSnap()
-        snap.pay(transaction.snap_token, { onClose: refresh, onSuccess: refresh, onPending: refresh, onError: refresh })
+        try {
+          const snap = await loadMidtransSnap()
+          const refreshStatus = () => { setPaymentLoading(''); refresh() }
+          snap.pay(transaction.snap_token, { onClose: refreshStatus, onSuccess: refreshStatus, onPending: refreshStatus, onError: refreshStatus })
+        } catch (snapError) {
+          if (transaction.redirect_url) window.location.assign(transaction.redirect_url)
+          else throw snapError
+        }
       } else if (transaction.redirect_url) {
         window.location.assign(transaction.redirect_url)
       } else {

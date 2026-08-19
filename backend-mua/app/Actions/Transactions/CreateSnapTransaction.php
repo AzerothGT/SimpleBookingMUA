@@ -60,7 +60,7 @@ class CreateSnapTransaction
                 'user_id' => $actor?->id,
                 'order_id' => $orderId,
                 'gross_amount' => $grossAmount,
-                'type' => 'dp',
+                'type' => $type,
                 'snap_token' => $snap['token'],
                 'redirect_url' => $snap['redirect_url'],
                 'transaction_status' => 'pending',
