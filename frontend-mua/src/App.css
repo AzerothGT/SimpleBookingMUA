@@ -1,10 +1,4 @@
-@reference "tailwindcss";
-
-@theme {
-  --font-display: Georgia, serif;
-  --font-body: 'Manrope', sans-serif;
-  --font-mono: 'DM Mono', monospace;
-}
+@reference "./index.css";
 
 :root {
   --ink: #25302b;
