@@ -10,6 +10,8 @@ return [
     | Backend ini di-consume oleh SPA terpisah (frontend-mua di Vercel) dan
     | memakai bearer token Sanctum, bukan cookie. Origin dibatasi ke domain
     | frontend yang sah lewat env `CORS_ALLOWED_ORIGINS` (dipisah koma).
+    | Untuk dev lokal, `allowed_origins_patterns` default mengizinkan
+    | localhost/127.0.0.1 di port berapa pun (Vite dev & preview).
     | Karena auth token-based, `supports_credentials` dibiarkan false.
     |
     */
@@ -25,7 +27,10 @@ return [
 
     'allowed_origins_patterns' => array_values(array_filter(array_map(
         'trim',
-        explode(',', (string) env('CORS_ALLOWED_ORIGINS_PATTERNS', '')),
+        explode(',', (string) env(
+            'CORS_ALLOWED_ORIGINS_PATTERNS',
+            '#^http://(localhost|127\.0\.0\.1)(:\d+)?$#',
+        )),
     ))),
 
     'allowed_headers' => ['*'],

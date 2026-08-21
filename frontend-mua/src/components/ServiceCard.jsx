@@ -69,7 +69,7 @@ export default function ServiceCard({ service }) {
       </div>}
       <div className="flex w-full items-start justify-between gap-4">
         <div>
-          <h2 className="m-0 text-lg font-bold" style={{ color: 'var(--ink)' }}>{service.name}</h2>
+          <h2 className="m-0 font-display text-xl font-normal tracking-[-.02em]" style={{ color: 'var(--ink)' }}>{service.name}</h2>
           <p className="mt-2 text-sm leading-6" style={{ color: 'var(--muted)' }}>{service.description}</p>
         </div>
         <strong className="whitespace-nowrap font-mono text-xs" style={{ color: 'var(--green)' }}>{service.priceLabel}</strong>

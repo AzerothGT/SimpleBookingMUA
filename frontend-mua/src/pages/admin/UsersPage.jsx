@@ -54,7 +54,7 @@ export default function UsersPage() {
     { key: 'name', label: 'Nama', render: (row) => <strong>{row.name}{row.id === currentUserId ? ' (Anda)' : ''}</strong> },
     { key: 'username', label: 'Username' },
     { key: 'phone', label: 'Telepon', render: (row) => row.phone || '—' },
-    { key: 'role', label: 'Role', render: (row) => <span className={`text-status ${row.role === 'owner' ? 'is-active' : ''}`}>{row.role}</span> },
+    { key: 'role', label: 'Role', render: (row) => <span className={`text-status capitalize ${row.role === 'owner' ? 'is-active' : ''}`}>{row.role}</span> },
     { key: 'is_active', label: 'Status', render: (row) => <span className={`text-status ${row.is_active ? 'is-active' : 'is-inactive'}`}>{row.is_active ? 'Aktif' : 'Nonaktif'}</span> },
     { key: 'created_at', label: 'Dibuat', render: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
     { key: 'actions', label: 'Aksi', render: (row) => {

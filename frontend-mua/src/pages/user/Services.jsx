@@ -30,9 +30,8 @@ export default function Services() {
       <Navbar />
       <section className="booking-shell min-h-0" aria-labelledby="services-title">
         <div className="max-w-2xl">
-          <span className="eyebrow">Layanan makeup</span>
-          <h1 id="services-title" className="m-0 mt-3 font-display text-5xl font-normal tracking-[-.06em]" style={{ color: 'var(--ink)' }}>Pilih look untuk momenmu.</h1>
-          <p className="mt-5 text-base leading-7" style={{ color: 'var(--muted)' }}>Lihat pilihan layanan, lalu lanjutkan booking tanpa membuat akun.</p>
+          <span className="eyebrow">Layanan</span>
+          <h1 id="services-title" className="m-0 mt-3 font-display text-5xl font-normal tracking-[-.06em]" style={{ color: 'var(--ink)' }}>Pilih look.</h1>
         </div>
         {status === 'loading' && <p className="muted-text">Memuat layanan...</p>}
         {status === 'error' && <p className="field-error" role="alert">Layanan belum dapat dimuat.</p>}
