@@ -193,6 +193,36 @@ it('stores public settlement payments as pelunasan', function () {
         ->assertJsonPath('type', 'pelunasan');
 });
 
+it('offers the remaining balance as pelunasan after a settled dp', function () {
+    [$booking, $token] = publicPaymentBooking();
+    $booking->update([
+        'status' => 'confirmed',
+        'starts_at' => '2026-08-10 12:00:00',
+        'ends_at' => '2026-08-10 15:00:00',
+    ]);
+
+    Transaction::factory()->for($booking)->create([
+        'type' => 'dp',
+        'gross_amount' => 50000,
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+    ]);
+
+    app()->bind(PaymentGateway::class, fn () => new class implements PaymentGateway
+    {
+        public function createSnap(Booking $booking, string $orderId, int $grossAmount): array
+        {
+            return ['token' => 'pelunasan-token', 'redirect_url' => 'https://example.test/pay'];
+        }
+    });
+
+    $this->postJson("/api/public/bookings/{$booking->id}/transactions/snap?token={$token}&type=pelunasan")
+        ->assertCreated()
+        ->assertJsonPath('type', 'pelunasan')
+        ->assertJsonPath('gross_amount', 450000);
+});
+
 it('creates one public Snap transaction after scheduling', function () {
     [$booking, $token] = publicPaymentBooking();
     $booking->update([

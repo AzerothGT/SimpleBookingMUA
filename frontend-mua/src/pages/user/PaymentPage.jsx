@@ -51,7 +51,8 @@ export default function PaymentPage() {
   }, [refresh])
 
   useEffect(() => {
-    if (!booking || ['confirmed', 'cancelled', 'done'].includes(booking.status)) return undefined
+    if (!booking || ['cancelled', 'done'].includes(booking.status)) return undefined
+    if (Number(booking.payment_summary?.remaining ?? 0) === 0) return undefined
     const interval = window.setInterval(refresh, 10000)
     return () => window.clearInterval(interval)
   }, [booking, refresh])
@@ -108,12 +109,12 @@ export default function PaymentPage() {
         {!loading && booking && <div className="payment-layout">
           <div className="form-panel">
             <span className="eyebrow">Ringkasan booking</span>
-            <h2>{booking.status === 'confirmed' ? 'Pembayaran terkonfirmasi.' : 'Ringkasan booking.'}</h2>
+            <h2>{remaining === 0 ? 'Pembayaran lunas.' : booking.status === 'confirmed' ? 'Jadwal terkonfirmasi.' : 'Ringkasan booking.'}</h2>
             <p>{booking.starts_at ? new Date(booking.starts_at).toLocaleString('id-ID') : 'Jadwal belum tersedia'}</p>
             <div className="payment-progress" aria-label={`${paymentProgress}% pembayaran selesai`}>
               <div className="payment-progress-heading"><span>Progres pembayaran</span><strong>{paymentProgress}%</strong></div>
               <div className="payment-progress-track"><span style={{ width: `${paymentProgress}%` }} /></div>
-              <p>{paymentProgress === 0 ? 'Belum ada pembayaran. Mulai dari DP untuk mengamankan jadwal.' : `${formatCurrency(paid)} dari ${formatCurrency(summary?.total)} sudah dibayar.`}</p>
+              <p>{paymentProgress === 0 ? 'Belum ada pembayaran. Mulai dari DP untuk mengamankan jadwal.' : remaining === 0 ? `${formatCurrency(paid)} sudah dibayar. Tidak ada sisa tagihan.` : `${formatCurrency(paid)} dari ${formatCurrency(summary?.total)} sudah dibayar. Sisa ${formatCurrency(remaining)}.`}</p>
             </div>
             <div className="public-booking-status">
               <span className="detail-label">Booking ID</span><strong>{booking.id}</strong>
@@ -124,12 +125,12 @@ export default function PaymentPage() {
             </div>
           </div>
           <div className="form-panel">
-            {booking.status === 'confirmed' || remaining === 0 ? <div className="success-mark"><CheckCircleIcon size={36} aria-hidden="true" /></div> : <>
+            {remaining === 0 || ['cancelled', 'done'].includes(booking.status) ? <div className="success-mark"><CheckCircleIcon size={36} aria-hidden="true" /></div> : <>
               <span className="eyebrow">Pembayaran</span>
-              <h2>Pilih nominal.</h2>
+              <h2>{paid > 0 ? 'Lunasi sisa tagihan.' : 'Pilih nominal.'}</h2>
               <div className="payment-choice-list">
-                {!paidTypes.has('dp') && <button className="button button-primary" type="button" disabled={Boolean(paymentLoading)} onClick={() => startPayment('dp')}>{paymentLoading === 'dp' ? 'Menyiapkan...' : `DP ${formatCurrency(dpAmount)}`}</button>}
-                {remaining > 0 && <button className="button button-secondary" type="button" disabled={Boolean(paymentLoading)} onClick={() => startPayment('pelunasan')}>{paymentLoading === 'pelunasan' ? 'Menyiapkan...' : `Bayar lunas ${formatCurrency(remaining)}`}</button>}
+                {!paidTypes.has('dp') && paid === 0 && <button className="button button-primary" type="button" disabled={Boolean(paymentLoading)} onClick={() => startPayment('dp')}>{paymentLoading === 'dp' ? 'Menyiapkan...' : `DP ${formatCurrency(dpAmount)}`}</button>}
+                <button className={paid > 0 ? 'button button-primary' : 'button button-secondary'} type="button" disabled={Boolean(paymentLoading)} onClick={() => startPayment('pelunasan')}>{paymentLoading === 'pelunasan' ? 'Menyiapkan...' : `${paid > 0 ? 'Lunasi' : 'Bayar lunas'} ${formatCurrency(remaining)}`}</button>
               </div>
               <p className="payment-trust"><CreditCardIcon size={15} aria-hidden="true" /> Aman via Midtrans · Status otomatis diperbarui</p>
             </>}
