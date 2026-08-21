@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
+import { PencilSimpleIcon, PlusIcon, TrashIcon, FloppyDiskIcon } from '@phosphor-icons/react'
 import AdminDataTable from '../../components/AdminDataTable'
 import AdminLayout from '../../components/AdminLayout'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { createAdminUser, deleteAdminUser, listAdminUsers, unwrapList, updateAdminUser } from '../../api/adminApi'
 import { getStoredSession } from '../../session'
+import { useToast } from '../../context/useToast'
 
 const blankUser = { name: '', username: '', phone: '', instagram_url: '', password: '', role: 'staff', is_active: true }
 const getError = (error) => error?.payload?.message ?? error?.message ?? 'Permintaan gagal diproses.'
@@ -17,36 +18,36 @@ export default function UsersPage() {
   const [form, setForm] = useState(blankUser)
   const [editing, setEditing] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [feedback, setFeedback] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const session = getStoredSession()
   const currentUserId = session?.user?.id
+  const { toast } = useToast()
 
 
   const loadUsers = useCallback(async () => { setIsLoading(true); setError(''); try { setRows(unwrapList(await listAdminUsers(filters))) } catch (requestError) { setError(getError(requestError)) } finally { setIsLoading(false) } }, [filters])
   useEffect(() => { loadUsers() }, [loadUsers])
 
-  const openCreate = () => { setEditing(null); setForm(blankUser); setFeedback(''); setModalOpen(true) }
-  const openEdit = (user) => { setEditing(user); setForm({ name: user.name, username: user.username, phone: user.phone ?? '', instagram_url: user.instagram_url ?? '', password: '', role: user.role, is_active: user.is_active }); setFeedback(''); setModalOpen(true) }
+  const openCreate = () => { setEditing(null); setForm(blankUser); setModalOpen(true) }
+  const openEdit = (user) => { setEditing(user); setForm({ name: user.name, username: user.username, phone: user.phone ?? '', instagram_url: user.instagram_url ?? '', password: '', role: user.role, is_active: user.is_active }); setModalOpen(true) }
 
   const saveUser = async (event) => {
     event.preventDefault()
-    if (!form.name.trim() || !form.username.trim()) { setFeedback('Nama dan username wajib diisi.'); return }
-    if (!editing && form.password.length < 8) { setFeedback('Password minimal 8 karakter.'); return }
-    if (form.password && form.password.length < 8) { setFeedback('Password minimal 8 karakter.'); return }
+    if (!form.name.trim() || !form.username.trim()) { toast({ type: 'info', message: 'Nama dan username wajib diisi.' }); return }
+    if (!editing && form.password.length < 8) { toast({ type: 'info', message: 'Password minimal 8 karakter.' }); return }
+    if (form.password && form.password.length < 8) { toast({ type: 'info', message: 'Password minimal 8 karakter.' }); return }
     try {
       const body = { name: form.name.trim(), username: form.username.trim(), phone: form.phone.trim() || null, instagram_url: form.instagram_url.trim() || null, role: form.role, is_active: form.is_active }
       if (form.password) body.password = form.password
       if (editing) await updateAdminUser(editing.id, body)
       else await createAdminUser(body)
-      setEditing(null); setForm(blankUser); setModalOpen(false); setFeedback('Pengguna tersimpan.'); await loadUsers()
-    } catch (requestError) { setFeedback(getError(requestError)) }
+      setEditing(null); setForm(blankUser); setModalOpen(false); toast({ type: 'success', title: 'Pengguna tersimpan', message: `${body.name} berhasil disimpan.` }); await loadUsers()
+    } catch (requestError) { toast({ type: 'error', message: getError(requestError) }) }
   }
 
   const removeUser = async () => {
     setDeleteLoading(true)
-    try { await deleteAdminUser(editing.id); setConfirmOpen(false); setEditing(null); setModalOpen(false); setFeedback('Pengguna dinonaktifkan.'); await loadUsers() } catch (requestError) { setFeedback(getError(requestError)) } finally { setDeleteLoading(false) }
+    try { await deleteAdminUser(editing.id); setConfirmOpen(false); setEditing(null); setModalOpen(false); toast({ type: 'success', title: 'Pengguna dinonaktifkan', message: `Akun ${editing.name} berhasil dinonaktifkan.` }); await loadUsers() } catch (requestError) { toast({ type: 'error', message: getError(requestError) }) } finally { setDeleteLoading(false) }
   }
 
   const columns = useMemo(() => [
@@ -65,7 +66,7 @@ export default function UsersPage() {
   ], [currentUserId])
 
   return <AdminLayout title="Pengguna" description="Kelola akun tim dan hak aksesnya (khusus superadmin)." onRefresh={loadUsers} isLoading={isLoading} action={<button className="admin-button admin-button-primary" type="button" onClick={openCreate}><PlusIcon size={16} /> Pengguna baru</button>}>
-    <div className="admin-toolbar"><div><span className="eyebrow">Manajemen tim</span><h2>Daftar pengguna</h2></div><div className="admin-filters">
+    <div className="admin-toolbar"><div /><div className="admin-filters">
       <select value={filters.role} onChange={(event) => setFilters({ ...filters, role: event.target.value })} aria-label="Filter role">
         <option value="">Semua role</option><option value="admin">Admin</option><option value="staff">Staff</option><option value="owner">Owner</option>
       </select>
@@ -73,7 +74,6 @@ export default function UsersPage() {
         <option value="">Semua status</option><option value="1">Aktif</option><option value="0">Nonaktif</option>
       </select>
     </div></div>
-    {feedback && !modalOpen && <div className="admin-alert" role="status">{feedback}</div>}
     <AdminDataTable columns={columns} rows={rows} isLoading={isLoading} error={error} onRetry={loadUsers} emptyMessage="Belum ada pengguna." />
     {modalOpen && <div className="admin-modal-overlay is-open"><section className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="user-form-title">
       <button className="drawer-close" type="button" onClick={() => { setEditing(null); setForm(blankUser); setModalOpen(false) }} aria-label="Tutup">×</button>
@@ -91,10 +91,9 @@ export default function UsersPage() {
           </select>
         </label>
         <label className="admin-check"><input type="checkbox" checked={form.is_active} onChange={(event) => setForm({ ...form, is_active: event.target.checked })} /> Akun aktif</label>
-        {feedback && <div className="admin-alert">{feedback}</div>}
-        <button className="admin-button admin-button-primary" type="submit">Simpan pengguna</button>
+        <button className="admin-button admin-button-primary" type="submit"><FloppyDiskIcon size={16} /> Simpan</button>
       </form>
-      {editing && <button className="admin-button admin-button-danger modal-delete" type="button" disabled={editing.id === currentUserId} onClick={() => setConfirmOpen(true)}><TrashIcon size={16} /> Hapus pengguna</button>}
+      {editing && <button className="admin-button admin-button-danger modal-delete" type="button" disabled={editing.id === currentUserId} onClick={() => setConfirmOpen(true)}><TrashIcon size={16} /> Hapus</button>}
     </section></div>}
     <ConfirmDialog open={confirmOpen} title="Hapus pengguna?" message={`Akun ${editing?.name ?? ''} akan dinonaktifkan (soft-delete).`} isLoading={deleteLoading} onCancel={() => setConfirmOpen(false)} onConfirm={removeUser} />
   </AdminLayout>

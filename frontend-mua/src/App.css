@@ -572,9 +572,7 @@
 .admin-table td strong { color: var(--ink); }
 .admin-table td small { display: block; margin-top: .25rem; color: #929b93; font-size: .62rem; }
 .admin-state { display: flex; align-items: center; justify-content: center; gap: 1rem; min-height: 12rem; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: .75rem; }
-.admin-state-error, .admin-alert { color: #83502e; background: #fff5ed; }
-.admin-state-error { flex-direction: column; }
-.admin-alert { margin-bottom: 1rem; border: 1px solid rgba(230,132,79,.35); padding: .8rem 1rem; font-size: .75rem; }
+.admin-state-error { color: #83502e; background: #fff5ed; flex-direction: column; }
 .text-status { font-size: .7rem; font-weight: 800; }
 .text-status.is-active { color: var(--green); }
 .text-status.is-inactive { color: var(--muted); }
@@ -611,6 +609,7 @@
 .admin-drawer { width: min(100%, 32rem); height: 100%; overflow-y: auto; background: var(--surface); box-shadow: -1rem 0 3rem rgba(37,48,43,.12); }
 .admin-drawer header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 2rem 1.5rem 1.5rem; border-bottom: 1px solid var(--line); }
 .admin-drawer header h2, .admin-modal h2, .admin-dialog h2 { margin: .5rem 0 0; color: var(--ink); font: normal 2rem/1 var(--font-display); letter-spacing: -.055em; }
+.admin-modal h2 { margin-bottom: 1.25rem; }
 .admin-drawer-body { padding: 1.5rem; }
 .drawer-close { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 1.4rem; }
 .drawer-close:hover { color: var(--ink); }
@@ -618,8 +617,9 @@
 .admin-modal-overlay.is-open { display: grid; }
 .admin-modal { position: relative; width: min(100%, 30rem); max-height: calc(100vh - 2.5rem); overflow-y: auto; padding: 2rem; border: 1px solid var(--line); background: var(--surface); }
 .admin-modal > .drawer-close { position: absolute; top: .75rem; right: .75rem; }
-.modal-delete { margin-top: 1rem; }
-.service-image-manager { display: grid; gap: .75rem; margin-top: 1.25rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+.modal-delete { display: flex; width: 100%; margin-top: 1rem; }
+.service-image-manager { display: grid; gap: .75rem; margin-top: 1.25rem; }
+.service-image-manager > .eyebrow { color: var(--ink); }
 .service-image-empty, .service-image-hint { margin: 0; color: var(--muted); font-size: .68rem; }
 .service-image-hint { margin-top: 1rem; }
 .service-image-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr)); gap: .5rem; margin: 0; padding: 0; list-style: none; }
