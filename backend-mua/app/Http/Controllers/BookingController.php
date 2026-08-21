@@ -286,7 +286,7 @@ class BookingController extends Controller
             $request->validated(),
         );
 
-        return BookingResource::make($booking->load(['user', 'staffSchedules.user', 'bookingServices.service']));
+        return BookingResource::make($booking->load(['user', 'staffSchedules.user', 'bookingServices.service', 'transactions']));
     }
 
     #[OA\Get(
