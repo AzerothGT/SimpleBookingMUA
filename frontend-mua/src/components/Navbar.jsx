@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { clearSession, getStoredSession, hasValidSession } from '../session'
+import { clearSession, getStoredSession, hasValidSession } from '../utils/session'
 
 export default function Navbar() {
   const location = useLocation()

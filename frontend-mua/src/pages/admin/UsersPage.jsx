@@ -4,7 +4,7 @@ import AdminDataTable from '../../components/AdminDataTable'
 import AdminLayout from '../../components/AdminLayout'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { createAdminUser, deleteAdminUser, listAdminUsers, unwrapList, updateAdminUser } from '../../api/adminApi'
-import { getStoredSession } from '../../session'
+import { getStoredSession } from '../../utils/session'
 import { useToast } from '../../context/useToast'
 
 const blankUser = { name: '', username: '', phone: '', instagram_url: '', password: '', role: 'staff', is_active: true }

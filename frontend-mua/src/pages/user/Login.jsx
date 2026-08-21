@@ -3,7 +3,7 @@ import { ArrowRightIcon, EyeIcon, EyeSlashIcon, WarningCircleIcon } from '@phosp
 import { Link, useNavigate } from 'react-router-dom'
 import { login } from '../../api/bookingApi'
 import Navbar from '../../components/Navbar'
-import { saveSession } from '../../session'
+import { saveSession } from '../../utils/session'
 
 export default function LoginPage() {
   const navigate = useNavigate()

@@ -1,6 +1,6 @@
 import { ArrowClockwiseIcon } from '@phosphor-icons/react'
 import DashboardSidebar from './DashboardSidebar'
-import { getStoredSession } from '../session'
+import { getStoredSession } from '../utils/session'
 
 export default function AdminLayout({ eyebrow = 'Ruang kerja', title, description, action, onRefresh, isLoading = false, children }) {
   const sessionUser = getStoredSession()?.user

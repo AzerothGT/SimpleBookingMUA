@@ -8,7 +8,7 @@ import BookingTable from '../../components/BookingTable'
 import DashboardSidebar from '../../components/DashboardSidebar'
 import MetricCard from '../../components/MetricCard'
 import StatusBadge from '../../components/StatusBadge'
-import { getStoredSession } from '../../session'
+import { getStoredSession } from '../../utils/session'
 const todayKey = new Date().toISOString().slice(0, 10)
 
 export default function AdminDashboard() {

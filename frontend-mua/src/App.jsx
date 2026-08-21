@@ -1,17 +1,18 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import './App.css'
 import Home from './pages/user/Home'
 import Services from './pages/user/Services'
 import BookingPage from './pages/user/BookingPage'
 import PaymentPage from './pages/user/PaymentPage'
-
-import AdminDashboard from './pages/admin/AdminDashboard'
-import ActivityLogsPage from './pages/admin/ActivityLogsPage'
-import BookingsPage from './pages/admin/BookingsPage'
-import ServicesPage from './pages/admin/ServicesPage'
-import UsersPage from './pages/admin/UsersPage'
 import LoginPage from './pages/user/Login'
-import { getStoredSession, hasValidSession } from './session'
+import { getStoredSession, hasValidSession } from './utils/session'
+
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const ActivityLogsPage = lazy(() => import('./pages/admin/ActivityLogsPage'))
+const BookingsPage = lazy(() => import('./pages/admin/BookingsPage'))
+const ServicesPage = lazy(() => import('./pages/admin/ServicesPage'))
+const UsersPage = lazy(() => import('./pages/admin/UsersPage'))
 
 function RequireAuth() {
   if (!hasValidSession()) return <Navigate to="/login" replace />
@@ -27,24 +28,26 @@ function RequireRole({ allow }) {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/services" element={<Services />} />
-        <Route path="/booking" element={<BookingPage />} />
-        <Route path="/payment" element={<PaymentPage />} />
+      <Suspense fallback={<div className="admin-state">Memuat...</div>}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/payment" element={<PaymentPage />} />
 
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<RequireAuth />}>
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/bookings" element={<BookingsPage />} />
-          <Route path="/admin/services" element={<ServicesPage />} />
-          <Route element={<RequireRole allow={['admin']} />}>
-            <Route path="/admin/users" element={<UsersPage />} />
-            <Route path="/admin/activity" element={<ActivityLogsPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route element={<RequireAuth />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/bookings" element={<BookingsPage />} />
+            <Route path="/admin/services" element={<ServicesPage />} />
+            <Route element={<RequireRole allow={['admin']} />}>
+              <Route path="/admin/users" element={<UsersPage />} />
+              <Route path="/admin/activity" element={<ActivityLogsPage />} />
+            </Route>
           </Route>
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

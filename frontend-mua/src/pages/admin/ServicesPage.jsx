@@ -5,7 +5,7 @@ import AdminLayout from '../../components/AdminLayout'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { createAdminService, createServiceImage, deleteAdminService, deleteServiceImage, listAdminServices, unwrap, unwrapList, updateAdminService, updateServiceImage } from '../../api/adminApi'
 import { formatCurrency } from '../../api/adminApi'
-import { getStoredSession } from '../../session'
+import { getStoredSession } from '../../utils/session'
 import { useToast } from '../../context/useToast'
 
 const blankService = { name: '', description: '', price: '', is_active: true }

@@ -537,6 +537,12 @@
   .login-card { padding: 1.75rem; }
 }
 
+/* Error boundary */
+.error-boundary { min-height: 100vh; display: grid; place-items: center; padding: 3rem 1.25rem; background: var(--paper); }
+.error-boundary-card { width: min(100%, 30rem); border: 1px solid var(--line); background: var(--surface); padding: 2.5rem; text-align: center; }
+.error-boundary-card h1 { margin: .5rem 0 .75rem; font: normal clamp(2rem, 5vw, 2.8rem)/.95 var(--font-display); letter-spacing: -.065em; color: var(--ink); }
+.error-boundary-card p { margin: 0 0 1.5rem; color: var(--muted); font-size: .8rem; line-height: 1.6; }
+
 .admin-page-content { width: min(100%, 77rem); padding: 3rem clamp(1.25rem, 4vw, 4rem); }
 .admin-page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem; margin-bottom: 2.5rem; }
 .admin-page-heading h1 { margin: .5rem 0 .35rem; font: normal clamp(2.3rem, 4vw, 3.8rem)/.95 var(--font-display); letter-spacing: -.065em; color: var(--ink); }
