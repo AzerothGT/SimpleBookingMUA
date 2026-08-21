@@ -10,15 +10,37 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('restricts user management to superadmin', function (string $role, int $status) {
+it('allows owners and admins to read users', function (string $role, int $status) {
     $this->withToken(tokenForRole($role))
         ->getJson('/api/users')
         ->assertStatus($status);
 })->with([
     'admin' => ['admin', 200],
-    'owner' => ['owner', 403],
+    'owner' => ['owner', 200],
     'staff' => ['staff', 403],
 ]);
+
+it('keeps user writes restricted to admins', function () {
+    $ownerToken = tokenForRole('owner');
+    $staff = User::factory()->staff()->create();
+
+    $this->withToken($ownerToken)
+        ->postJson('/api/users', [
+            'name' => 'New Staff',
+            'username' => 'new-staff',
+            'password' => 'secret-password',
+            'role' => 'staff',
+        ])
+        ->assertForbidden();
+
+    $this->withToken($ownerToken)
+        ->patchJson('/api/users/'.$staff->id, ['name' => 'Updated Staff'])
+        ->assertForbidden();
+
+    $this->withToken($ownerToken)
+        ->deleteJson('/api/users/'.$staff->id)
+        ->assertForbidden();
+});
 
 it('restricts service writes to owner and admin', function (string $role, int $status) {
     $this->withToken(tokenForRole($role))
