@@ -78,13 +78,13 @@ export default function BookingsPage() {
   const saveBooking = (body) => mutate(async () => { await updateAdminBooking(selected.id, body.details); return assignAdminBooking(selected.id, body.schedule) })
 
   const columns = useMemo(() => [
-    { key: 'booking_code', label: 'Booking code', render: (row) => <span className="booking-code-cell">{row.booking_code ?? '—'}</span> },
+    { key: 'booking_code', label: 'Booking code', className: 'table-col-code', render: (row) => <span className="booking-code-cell">{row.booking_code ?? '—'}</span> },
     { key: 'client_name', label: 'Klien', render: (row) => <strong>{row.client_name}</strong> },
     { key: 'requested', label: 'Pengajuan', render: (row) => <span>{formatDate(row.client_requested_date)}<small>{row.client_requested_end_time}</small></span> },
     { key: 'services', label: 'Layanan', render: (row) => <span className="booking-services-cell">{(row.services ?? []).map((service) => service.name).join(', ') || '—'}</span> },
-    { key: 'staff', label: 'Staff', render: (row) => formatBookingStaff(row) },
-    { key: 'status', label: 'Status', render: (row) => <PaymentStatusBadge state={getPaymentState(row.transactions).key} /> },
-    { key: 'actions', label: 'Aksi', render: (row) => <button className="table-action" type="button" onClick={() => openBooking(row.id)} aria-label={`Lihat detail booking ${row.client_name}`} title="Lihat detail"><EyeIcon size={15} aria-hidden="true" /></button> },
+    { key: 'staff', label: 'Staff', className: 'table-col-staff', render: (row) => formatBookingStaff(row) },
+    { key: 'status', label: 'Status', className: 'table-col-status', render: (row) => <PaymentStatusBadge state={getPaymentState(row.transactions).key} /> },
+    { key: 'actions', label: 'Aksi', className: 'table-col-actions', render: (row) => <button className="table-action" type="button" onClick={() => openBooking(row.id)} aria-label={`Lihat detail booking ${row.client_name}`} title="Lihat detail"><EyeIcon size={15} aria-hidden="true" /></button> },
   ], [openBooking])
 
   const visibleRows = useMemo(() => paymentFilter ? rows.filter((row) => getPaymentState(row.transactions).key === paymentFilter) : rows, [rows, paymentFilter])

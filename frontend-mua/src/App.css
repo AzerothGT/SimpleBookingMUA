@@ -564,6 +564,11 @@
 .admin-table th { padding: .85rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); font: .6rem var(--font-mono); letter-spacing: .04em; text-align: left; text-transform: uppercase; }
 .admin-table td { padding: 1rem 1.25rem; border-bottom: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 .admin-table tr:last-child td { border-bottom: 0; }
+.table-col-code { width: 8rem; }
+.admin-table td.table-col-staff { white-space: normal; line-height: 1.5; }
+.table-col-status { width: 9.5rem; }
+.table-col-actions { width: 3.5rem; text-align: right; }
+.admin-table th.table-col-actions { text-align: right; }
 .admin-table td strong { color: var(--ink); }
 .admin-table td small { display: block; margin-top: .25rem; color: #929b93; font-size: .62rem; }
 .admin-state { display: flex; align-items: center; justify-content: center; gap: 1rem; min-height: 12rem; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: .75rem; }
