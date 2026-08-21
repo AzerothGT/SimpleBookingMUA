@@ -54,7 +54,7 @@ class PublicBookingController extends Controller
         }
 
         $total = (int) round($booking->bookingServices->sum(fn ($item) => (float) $item->service->price * $item->qty));
-        $paid = (int) $booking->transactions->filter(fn ($item) => $item->isPaid())->sum('gross_amount');
+        $paid = (int) $booking->transactions->sum(fn ($item) => $item->paidAmount());
         $remaining = max(0, $total - $paid);
         $minimumDp = $total < 500000 ? 50000 : (int) ceil($total * 0.10);
         $amount = $type === 'dp' ? min($remaining, $minimumDp) : $remaining;
@@ -83,7 +83,12 @@ class PublicBookingController extends Controller
 
         if ($transaction) {
             $payload = $midtransStatus->fetch($transaction->order_id);
-            $handleWebhook->handle($payload);
+
+            // Midtrans answers with HTTP 200 and a 404 body when the order was
+            // never charged. Such payloads carry no signature to verify.
+            if (isset($payload['signature_key'], $payload['order_id'])) {
+                $handleWebhook->handle($payload);
+            }
         }
 
         return PublicBookingResource::make($booking->fresh()->load([

@@ -120,6 +120,38 @@ it('synchronizes a settled Midtrans payment into the invoice', function () {
     expect($transaction->fresh()->paid_at)->not->toBeNull();
 });
 
+it('ignores a Midtrans status payload without a signature', function () {
+    [$booking, $token] = publicPaymentBooking();
+
+    $transaction = Transaction::factory()->for($booking)->create([
+        'order_id' => 'MUA-MISSING-ORDER',
+        'gross_amount' => 50000,
+        'type' => 'dp',
+        'transaction_status' => 'pending',
+        'paid_at' => null,
+    ]);
+
+    config([
+        'services.midtrans.server_key' => 'server-secret',
+        'services.midtrans.core_url' => 'https://api.midtrans.test',
+    ]);
+    // Midtrans answers 404 bodies with HTTP 200 and no signature.
+    Http::fake([
+        'https://api.midtrans.test/v2/MUA-MISSING-ORDER/status' => Http::response([
+            'status_code' => '404',
+            'status_message' => "Transaction doesn't exist.",
+            'id' => 'b2f1c0de-0000-4000-8000-000000000000',
+        ]),
+    ]);
+
+    $this->postJson("/api/public/bookings/{$booking->id}/transactions/sync?token={$token}")
+        ->assertSuccessful()
+        ->assertJsonPath('payment_summary.paid', 0);
+
+    expect($transaction->fresh()->transaction_status)->toBe('pending')
+        ->and($transaction->fresh()->paid_at)->toBeNull();
+});
+
 it('creates a public Snap transaction for a scheduled pending booking', function () {
     [$booking, $token] = publicPaymentBooking();
     $booking->update([

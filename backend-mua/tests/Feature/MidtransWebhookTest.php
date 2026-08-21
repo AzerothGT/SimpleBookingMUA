@@ -78,15 +78,15 @@ it('rejects forged signatures without mutation', function () {
     expect($transaction->fresh()->transaction_status)->toBe('pending');
 });
 
-it('rejects amount mismatch and unknown order IDs', function () {
+it('acknowledges valid notifications for unknown order IDs', function () {
     $transaction = webhookTransaction();
+    $unknown = midtransPayload($transaction, [
+        'order_id' => 'payment_notif_test_M263923382_283ce562-636e-472c-a57d-eb236a5d963a',
+    ]);
 
-    $this->postJson('/api/webhooks/midtrans', midtransPayload($transaction, [
-        'gross_amount' => ($transaction->gross_amount + 1).'.00',
-    ]))->assertUnprocessable();
+    $this->postJson('/api/webhooks/midtrans', $unknown)->assertSuccessful();
 
-    $unknown = midtransPayload($transaction, ['order_id' => 'UNKNOWN-ORDER']);
-    $this->postJson('/api/webhooks/midtrans', $unknown)->assertNotFound();
+    expect($transaction->fresh()->transaction_status)->toBe('pending');
 });
 
 it('processes successful payment and confirms a scheduled booking', function (string $status) {
@@ -178,5 +178,137 @@ it('allows refund after settlement without clearing paid_at', function () {
     ]))->assertSuccessful();
 
     expect($transaction->fresh()->transaction_status)->toBe('refund')
+        ->and($transaction->fresh()->paid_at)->not->toBeNull()
+        ->and($transaction->fresh()->refunded_amount)->toBe($transaction->gross_amount);
+});
+
+it('records a chargeback after settlement', function () {
+    $transaction = webhookTransaction([
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+    ]);
+
+    $this->postJson('/api/webhooks/midtrans', midtransPayload($transaction, [
+        'transaction_status' => 'chargeback',
+        'fraud_status' => null,
+    ]))->assertSuccessful();
+
+    expect($transaction->fresh()->transaction_status)->toBe('chargeback')
+        ->and($transaction->fresh()->refunded_amount)->toBe($transaction->gross_amount)
         ->and($transaction->fresh()->paid_at)->not->toBeNull();
+});
+
+it('records a partial refund without clobbering the settled status', function (string $status) {
+    $transaction = webhookTransaction([
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+        'gross_amount' => 1000000,
+    ]);
+
+    $this->postJson('/api/webhooks/midtrans', midtransPayload($transaction, [
+        'transaction_status' => $status,
+        'fraud_status' => null,
+        'refund_amount' => '250000.00',
+    ]))->assertSuccessful();
+
+    $transaction->refresh();
+
+    expect($transaction->transaction_status)->toBe('settlement')
+        ->and($transaction->fraud_status)->toBe('accept')
+        ->and($transaction->paid_at)->not->toBeNull()
+        ->and($transaction->refunded_amount)->toBe(250000)
+        ->and($transaction->paidAmount())->toBe(750000);
+})->with(['partial_refund', 'partial_chargeback']);
+
+it('treats the partial refund amount as cumulative instead of accumulating it', function () {
+    $transaction = webhookTransaction([
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+        'gross_amount' => 1000000,
+    ]);
+
+    foreach (['250000.00', '400000.00'] as $refundAmount) {
+        $this->postJson('/api/webhooks/midtrans', midtransPayload($transaction, [
+            'transaction_status' => 'partial_refund',
+            'fraud_status' => null,
+            'refund_amount' => $refundAmount,
+        ]))->assertSuccessful();
+    }
+
+    expect($transaction->fresh()->refunded_amount)->toBe(400000);
+});
+
+it('ignores a replayed partial refund notification', function () {
+    $transaction = webhookTransaction([
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+        'gross_amount' => 1000000,
+    ]);
+
+    $payload = midtransPayload($transaction, [
+        'transaction_status' => 'partial_refund',
+        'fraud_status' => null,
+        'refund_amount' => '250000.00',
+    ]);
+
+    $this->postJson('/api/webhooks/midtrans', $payload)->assertSuccessful();
+    $this->postJson('/api/webhooks/midtrans', $payload)->assertSuccessful();
+
+    expect($transaction->fresh()->refunded_amount)->toBe(250000)
+        ->and(ActivityLog::where('action', 'transaction.webhook')->count())->toBe(1);
+});
+
+it('finalises a partially refunded transaction with a full refund', function () {
+    $transaction = webhookTransaction([
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+        'gross_amount' => 1000000,
+        'refunded_amount' => 250000,
+    ]);
+
+    $this->postJson('/api/webhooks/midtrans', midtransPayload($transaction, [
+        'transaction_status' => 'refund',
+        'fraud_status' => null,
+        'refund_amount' => '1000000.00',
+    ]))->assertSuccessful();
+
+    expect($transaction->fresh()->transaction_status)->toBe('refund')
+        ->and($transaction->fresh()->refunded_amount)->toBe(1000000)
+        ->and($transaction->fresh()->paidAmount())->toBe(0);
+});
+
+it('rejects a refund larger than the transaction amount', function () {
+    $transaction = webhookTransaction([
+        'transaction_status' => 'settlement',
+        'fraud_status' => 'accept',
+        'paid_at' => now(),
+        'gross_amount' => 1000000,
+    ]);
+
+    $this->postJson('/api/webhooks/midtrans', midtransPayload($transaction, [
+        'transaction_status' => 'partial_refund',
+        'fraud_status' => null,
+        'refund_amount' => '1200000.00',
+    ]))->assertUnprocessable();
+
+    expect($transaction->fresh()->refunded_amount)->toBe(0)
+        ->and($transaction->fresh()->transaction_status)->toBe('settlement');
+});
+
+it('ignores a partial refund for a transaction that was never paid', function () {
+    $transaction = webhookTransaction(['gross_amount' => 1000000]);
+
+    $this->postJson('/api/webhooks/midtrans', midtransPayload($transaction, [
+        'transaction_status' => 'partial_refund',
+        'fraud_status' => null,
+        'refund_amount' => '250000.00',
+    ]))->assertSuccessful();
+
+    expect($transaction->fresh()->transaction_status)->toBe('pending')
+        ->and($transaction->fresh()->refunded_amount)->toBe(0);
 });

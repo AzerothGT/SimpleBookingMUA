@@ -15,29 +15,40 @@ class HandleMidtransWebhook
         private RecordActivity $recordActivity,
     ) {}
 
-    public function handle(array $payload): Transaction
+    public function handle(array $payload): ?Transaction
     {
-        return DB::transaction(function () use ($payload): Transaction {
+        return DB::transaction(function () use ($payload): ?Transaction {
             $this->validateSignature($payload);
 
             $transaction = Transaction::query()
                 ->with(['booking', 'user'])
                 ->where('order_id', $payload['order_id'])
                 ->lockForUpdate()
-                ->firstOrFail();
+                ->first();
+
+            // Midtrans dashboard URL tests use synthetic order IDs. The signature
+            // is already verified, so acknowledge notifications for other orders.
+            if (! $transaction) {
+                return null;
+            }
 
             $this->validateAmount($transaction, $payload['gross_amount']);
 
             $status = $payload['transaction_status'];
-            if ($this->shouldIgnore($transaction->transaction_status, $status)) {
+            if ($this->shouldIgnore($transaction, $status, $payload)) {
                 return $transaction;
             }
+
+            $refundedAmount = $this->refundedAmount($transaction, $status, $payload);
 
             $transaction->update([
                 'midtrans_transaction_id' => $payload['transaction_id'] ?? $transaction->midtrans_transaction_id,
                 'payment_type' => $payload['payment_type'] ?? $transaction->payment_type,
-                'transaction_status' => $status,
-                'fraud_status' => $payload['fraud_status'] ?? null,
+                // A partial refund leaves the payment intact, so the status is preserved.
+                'transaction_status' => $this->isPartial($status) ? $transaction->transaction_status : $status,
+                'refunded_amount' => $refundedAmount,
+                'fraud_status' => $payload['fraud_status']
+                    ?? ($this->isRefund($status) ? $transaction->fraud_status : null),
                 'status_code' => $payload['status_code'],
                 'paid_at' => $this->paidAt(
                     $transaction,
@@ -56,6 +67,7 @@ class HandleMidtransWebhook
                     'transaction_status' => $status,
                     'fraud_status' => $payload['fraud_status'] ?? null,
                     'status_code' => $payload['status_code'],
+                    'refunded_amount' => $refundedAmount,
                 ],
                 detail: 'Midtrans webhook processed.',
             );
@@ -83,14 +95,21 @@ class HandleMidtransWebhook
             throw new \RuntimeException('Midtrans server key is not configured.');
         }
 
+        $signature = $payload['signature_key'] ?? null;
+        if (! is_string($signature)) {
+            throw ValidationException::withMessages([
+                'signature_key' => 'The Midtrans signature is missing.',
+            ]);
+        }
+
         $expected = hash('sha512',
-            $payload['order_id']
-            .$payload['status_code']
-            .$payload['gross_amount']
+            ($payload['order_id'] ?? '')
+            .($payload['status_code'] ?? '')
+            .($payload['gross_amount'] ?? '')
             .$serverKey
         );
 
-        if (! hash_equals($expected, $payload['signature_key'])) {
+        if (! hash_equals($expected, $signature)) {
             throw ValidationException::withMessages([
                 'signature_key' => 'The Midtrans signature is invalid.',
             ]);
@@ -106,18 +125,73 @@ class HandleMidtransWebhook
         }
     }
 
-    private function shouldIgnore(string $current, string $incoming): bool
+    private function shouldIgnore(Transaction $transaction, string $incoming, array $payload): bool
     {
-        if ($current === $incoming || $current === 'refund') {
+        $current = $transaction->transaction_status;
+
+        // Repeated partial refunds share the same status, so replays are detected
+        // by the cumulative amount instead.
+        if ($this->isPartial($incoming)) {
+            return ! in_array($current, ['capture', 'settlement'], true)
+                || $this->payloadRefundAmount($payload) <= (int) $transaction->refunded_amount;
+        }
+
+        if ($current === $incoming || $this->isFullRefund($current)) {
             return true;
         }
 
         return match ($current) {
-            'settlement' => $incoming !== 'refund',
-            'capture' => ! in_array($incoming, ['settlement', 'refund'], true),
+            'settlement' => ! $this->isRefund($incoming),
+            'capture' => $incoming !== 'settlement' && ! $this->isRefund($incoming),
+            'authorize' => ! in_array($incoming, ['capture', 'settlement', 'cancel', 'expire', 'deny', 'failure'], true),
             'deny', 'cancel', 'expire', 'failure' => true,
             default => false,
         };
+    }
+
+    private function isPartial(string $status): bool
+    {
+        return in_array($status, ['partial_refund', 'partial_chargeback'], true);
+    }
+
+    private function isFullRefund(string $status): bool
+    {
+        return in_array($status, ['refund', 'chargeback'], true);
+    }
+
+    private function isRefund(string $status): bool
+    {
+        return $this->isPartial($status) || $this->isFullRefund($status);
+    }
+
+    private function payloadRefundAmount(array $payload): int
+    {
+        return (int) round((float) ($payload['refund_amount'] ?? 0));
+    }
+
+    /**
+     * Midtrans reports `refund_amount` as the cumulative refunded total, so it is
+     * stored as-is rather than accumulated.
+     */
+    private function refundedAmount(Transaction $transaction, string $status, array $payload): int
+    {
+        if (! $this->isRefund($status)) {
+            return (int) $transaction->refunded_amount;
+        }
+
+        $amount = $this->payloadRefundAmount($payload);
+
+        if ($amount === 0 && $this->isFullRefund($status)) {
+            $amount = $transaction->gross_amount;
+        }
+
+        if ($amount > $transaction->gross_amount) {
+            throw ValidationException::withMessages([
+                'refund_amount' => 'The refund amount exceeds the transaction amount.',
+            ]);
+        }
+
+        return max($amount, (int) $transaction->refunded_amount);
     }
 
     private function paidAt(Transaction $transaction, string $status, ?string $fraudStatus): mixed
@@ -126,6 +200,6 @@ class HandleMidtransWebhook
             return $transaction->paid_at ?? now();
         }
 
-        return $status === 'refund' ? $transaction->paid_at : null;
+        return $this->isRefund($status) ? $transaction->paid_at : null;
     }
 }

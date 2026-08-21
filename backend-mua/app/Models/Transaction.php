@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'redirect_url',
     'midtrans_transaction_id',
     'gross_amount',
+    'refunded_amount',
     'type',
     'payment_type',
     'transaction_status',
@@ -44,6 +45,7 @@ class Transaction extends Model
     {
         return [
             'gross_amount' => 'integer',
+            'refunded_amount' => 'integer',
             'paid_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
@@ -75,5 +77,17 @@ class Transaction extends Model
     public function isPaid(): bool
     {
         return $this->paid_at !== null;
+    }
+
+    /**
+     * Amount still held by the merchant: the paid amount net of any refund.
+     */
+    public function paidAmount(): int
+    {
+        if (! $this->isPaid()) {
+            return 0;
+        }
+
+        return max(0, $this->gross_amount - (int) $this->refunded_amount);
     }
 }

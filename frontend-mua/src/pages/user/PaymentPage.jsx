@@ -29,7 +29,14 @@ export default function PaymentPage() {
     }
 
     try {
-      const payload = await getPublicBookingStatus(bookingId, token)
+      // Sync pulls the authoritative status from Midtrans, so the invoice stays
+      // correct even when the webhook never reaches this environment.
+      let payload
+      try {
+        payload = await syncPublicPaymentStatus(bookingId, token)
+      } catch {
+        payload = await getPublicBookingStatus(bookingId, token)
+      }
       setBooking(unwrap(payload))
       setError('')
     } catch (requestError) {
@@ -69,9 +76,8 @@ export default function PaymentPage() {
           snap.hide()
           setPaymentLoading('')
           refresh()
-          syncPublicPaymentStatus(bookingId, token).then(() => refresh()).catch(() => {})
-          window.setTimeout(() => syncPublicPaymentStatus(bookingId, token).then(() => refresh()).catch(() => {}), 2000)
-          window.setTimeout(() => syncPublicPaymentStatus(bookingId, token).then(() => refresh()).catch(() => {}), 5000)
+          window.setTimeout(refresh, 2000)
+          window.setTimeout(refresh, 5000)
         }
 
         snap.pay(transaction.snap_token, {

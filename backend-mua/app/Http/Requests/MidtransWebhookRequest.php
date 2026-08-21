@@ -10,16 +10,30 @@ class MidtransWebhookRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'order_id' => ['required', 'string', 'max:50'],
+            'order_id' => ['required', 'string', 'max:100'],
             'status_code' => ['required', 'string'],
             'gross_amount' => ['required', 'numeric', 'gt:0'],
             'transaction_status' => [
                 'required',
-                Rule::in(['pending', 'capture', 'settlement', 'deny', 'cancel', 'expire', 'failure', 'refund']),
+                Rule::in([
+                    'pending',
+                    'authorize',
+                    'capture',
+                    'settlement',
+                    'deny',
+                    'cancel',
+                    'expire',
+                    'failure',
+                    'refund',
+                    'partial_refund',
+                    'chargeback',
+                    'partial_chargeback',
+                ]),
             ],
             'fraud_status' => ['nullable', Rule::in(['accept', 'deny', 'challenge'])],
             'transaction_id' => ['nullable', 'string'],
             'payment_type' => ['nullable', 'string'],
+            'refund_amount' => ['nullable', 'numeric', 'min:0'],
             'signature_key' => ['required', 'string', 'size:128'],
         ];
     }

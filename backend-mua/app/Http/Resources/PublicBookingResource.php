@@ -22,7 +22,7 @@ class PublicBookingResource extends JsonResource
 
         $transactions = $this->transactions;
         $transaction = $transactions->first();
-        $paidAmount = (int) $transactions->filter(fn ($item) => $item->isPaid())->sum('gross_amount');
+        $paidAmount = (int) $transactions->sum(fn ($item) => $item->paidAmount());
         $totalAmount = (int) round($services->sum(fn (array $service): float => $service['subtotal']));
 
         return [
@@ -43,6 +43,7 @@ class PublicBookingResource extends JsonResource
             'transactions' => $transactions->map(fn ($item): array => [
                 'type' => $item->type,
                 'gross_amount' => $item->gross_amount,
+                'refunded_amount' => (int) $item->refunded_amount,
                 'transaction_status' => $item->transaction_status,
                 'paid_at' => $item->paid_at,
             ])->values(),
@@ -50,6 +51,7 @@ class PublicBookingResource extends JsonResource
                 'transaction_status' => $transaction->transaction_status,
                 'fraud_status' => $transaction->fraud_status,
                 'gross_amount' => $transaction->gross_amount,
+                'refunded_amount' => (int) $transaction->refunded_amount,
                 'paid_at' => $transaction->paid_at,
             ] : null,
         ];
