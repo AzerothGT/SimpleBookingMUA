@@ -18,6 +18,7 @@ export async function request(path, options = {}) {
 
   const headers = {
     Accept: 'application/json',
+    'ngrok-skip-browser-warning': 'true',
     ...(requestOptions.body ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...requestOptions.headers,
