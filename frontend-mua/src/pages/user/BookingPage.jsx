@@ -5,7 +5,8 @@ import { ArrowLeftIcon, ArrowRightIcon, ArrowUpRightIcon, CaretDownIcon, CheckIc
 import { createBooking, getPublicBookingStatus, listServices } from '../../api/bookingApi'
 import AnalogTimePicker from '../../components/AnalogTimePicker'
 import BookingCalendar from '../../components/BookingCalendar'
-import StatusBadge from '../../components/StatusBadge'
+import PaymentStatusBadge from '../../components/PaymentStatusBadge'
+import { getPaymentState } from '../../utils/paymentStatus'
 
 import { useToast } from '../../context/useToast'
 
@@ -357,12 +358,13 @@ export default function BookingPage() {
   if (submitState.status === 'success' && publicSession) {
     const scheduled = Boolean(publicBooking?.starts_at && publicBooking?.ends_at)
     const paid = ['capture', 'settlement'].includes(publicBooking?.payment?.transaction_status) && publicBooking?.payment?.paid_at
+    const paymentState = getPaymentState(publicBooking?.payment ? [publicBooking.payment] : [])
     return (
       <main className="success-page"><div className="success-card">
         <span className="eyebrow">Pengajuan terkirim</span><div className="success-mark" aria-hidden="true"><svg className="success-check" viewBox="0 0 32 32" fill="none"><path d="M7 16.5 13 22 25 10" pathLength="1" /></svg></div>
         <h1>{paid ? 'Pembayaran berhasil.' : scheduled ? 'Jadwal sudah tersedia.' : 'Booking berhasil dibuat.'}</h1>
         <p>{paid ? 'Pembayaran sedang tercatat di sistem.' : scheduled ? 'Jadwal booking sudah dikonfirmasi oleh tim kami.' : 'Tim kami akan mengonfirmasi bookingan dan segera menghubungi kamu.'}</p>
-        <div className="public-booking-status"><span className="detail-label">Booking code</span><div className="public-booking-id-row"><strong>{publicSession.bookingCode ?? publicSession.bookingId}</strong><button className="copy-booking-id" type="button" onClick={copyBookingId} aria-label={copyState === 'success' ? 'Booking code tersalin' : `Salin booking code ${publicSession.bookingCode ?? publicSession.bookingId}`} title={copyState === 'success' ? 'Tersalin' : 'Salin booking code'}>{copyState === 'success' ? <CheckIcon size={16} weight="bold" aria-hidden="true" /> : <CopyIcon size={16} weight="bold" aria-hidden="true" />}</button></div>{copyState === 'error' && <p className="copy-booking-id-error" role="alert">Tidak dapat menyalin otomatis. Pilih booking code secara manual.</p>}<span className="detail-label">Status</span><StatusBadge status={publicBooking?.status ?? 'pending'} />{scheduled && <><span className="detail-label">Jadwal mulai</span><strong>{new Date(publicBooking.starts_at).toLocaleString('id-ID')}</strong></>}</div>
+        <div className="public-booking-status"><span className="detail-label">Booking code</span><div className="public-booking-id-row"><strong>{publicSession.bookingCode ?? publicSession.bookingId}</strong><button className="copy-booking-id" type="button" onClick={copyBookingId} aria-label={copyState === 'success' ? 'Booking code tersalin' : `Salin booking code ${publicSession.bookingCode ?? publicSession.bookingId}`} title={copyState === 'success' ? 'Tersalin' : 'Salin booking code'}>{copyState === 'success' ? <CheckIcon size={16} weight="bold" aria-hidden="true" /> : <CopyIcon size={16} weight="bold" aria-hidden="true" />}</button></div>{copyState === 'error' && <p className="copy-booking-id-error" role="alert">Tidak dapat menyalin otomatis. Pilih booking code secara manual.</p>}<span className="detail-label">Status pembayaran</span><PaymentStatusBadge state={paymentState.key} />{scheduled && <><span className="detail-label">Jadwal mulai</span><strong>{new Date(publicBooking.starts_at).toLocaleString('id-ID')}</strong></>}</div>
         {publicError && <div className="login-error" role="alert">{publicError}</div>}
         {!paid && scheduled && <button className="button button-primary" disabled={paymentLoading} onClick={() => navigate(`/payment?booking=${encodeURIComponent(publicSession.bookingId)}&token=${encodeURIComponent(publicSession.token)}`)}>Buka pembayaran</button>}
         <button className="button button-secondary" onClick={resetBooking}>Kembali ke halaman utama</button>

@@ -39,6 +39,7 @@ export function normalizeBookings(payload) {
       amount,
       staffName: staff?.name ?? 'Belum ditugaskan',
       staffId: staff?.id ?? null,
+      transactions: booking.transactions ?? [],
     }
   }).filter((record) => record.id)
 }
