@@ -17,6 +17,7 @@ return [
     'midtrans' => [
         'server_key' => env('MIDTRANS_SERVER_KEY'),
         'snap_url' => env('MIDTRANS_SNAP_URL', 'https://app.sandbox.midtrans.com'),
+        'core_url' => env('MIDTRANS_CORE_URL', 'https://api.sandbox.midtrans.com'),
     ],
 
     'postmark' => [

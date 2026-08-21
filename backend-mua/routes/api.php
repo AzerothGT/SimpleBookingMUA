@@ -29,6 +29,7 @@ Route::get('/schedule/calendar', [BookingController::class, 'calendar']);
 Route::middleware('throttle:30,1')->group(function () {
     Route::get('/public/bookings/{booking}/status', [PublicBookingController::class, 'status']);
     Route::post('/public/bookings/{booking}/transactions/snap', [PublicBookingController::class, 'createSnap']);
+    Route::post('/public/bookings/{booking}/transactions/sync', [PublicBookingController::class, 'syncPaymentStatus']);
 });
 
 /*

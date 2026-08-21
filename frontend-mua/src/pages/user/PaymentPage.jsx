@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ArrowLeftIcon, CheckCircleIcon, CreditCardIcon, WarningCircleIcon } from '@phosphor-icons/react'
-import { createPublicSnapTransaction, getPublicBookingStatus, loadMidtransSnap } from '../../api/bookingApi'
+import { createPublicSnapTransaction, getPublicBookingStatus, loadMidtransSnap, syncPublicPaymentStatus } from '../../api/bookingApi'
 
 
 function formatCurrency(value) {
@@ -69,8 +69,9 @@ export default function PaymentPage() {
           snap.hide()
           setPaymentLoading('')
           refresh()
-          window.setTimeout(refresh, 2000)
-          window.setTimeout(refresh, 5000)
+          syncPublicPaymentStatus(bookingId, token).then(() => refresh()).catch(() => {})
+          window.setTimeout(() => syncPublicPaymentStatus(bookingId, token).then(() => refresh()).catch(() => {}), 2000)
+          window.setTimeout(() => syncPublicPaymentStatus(bookingId, token).then(() => refresh()).catch(() => {}), 5000)
         }
 
         snap.pay(transaction.snap_token, {

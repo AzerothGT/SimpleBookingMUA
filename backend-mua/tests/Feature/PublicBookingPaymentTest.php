@@ -6,6 +6,7 @@ use App\Models\Service;
 use App\Models\Transaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -74,6 +75,49 @@ it('does not create Snap before a booking is scheduled', function () {
 
     $this->postJson("/api/public/bookings/{$booking->id}/transactions/snap?token={$token}")
         ->assertUnprocessable();
+});
+
+it('synchronizes a settled Midtrans payment into the invoice', function () {
+    [$booking, $token] = publicPaymentBooking();
+    $booking->update([
+        'starts_at' => '2026-08-10 12:00:00',
+        'ends_at' => '2026-08-10 15:00:00',
+    ]);
+
+    $transaction = Transaction::factory()->for($booking)->create([
+        'order_id' => 'MUA-SYNC-ORDER',
+        'gross_amount' => 50000,
+        'type' => 'dp',
+        'transaction_status' => 'pending',
+        'paid_at' => null,
+    ]);
+    $grossAmount = '50000.00';
+    $serverKey = 'server-secret';
+
+    config([
+        'services.midtrans.server_key' => $serverKey,
+        'services.midtrans.core_url' => 'https://api.midtrans.test',
+    ]);
+    Http::fake([
+        'https://api.midtrans.test/v2/MUA-SYNC-ORDER/status' => Http::response([
+            'order_id' => $transaction->order_id,
+            'status_code' => '200',
+            'gross_amount' => $grossAmount,
+            'transaction_status' => 'settlement',
+            'fraud_status' => 'accept',
+            'transaction_id' => 'midtrans-sync-id',
+            'payment_type' => 'bank_transfer',
+            'signature_key' => hash('sha512', $transaction->order_id.'200'.$grossAmount.$serverKey),
+        ]),
+    ]);
+
+    $this->postJson("/api/public/bookings/{$booking->id}/transactions/sync?token={$token}")
+        ->assertSuccessful()
+        ->assertJsonPath('payment_summary.paid', 50000)
+        ->assertJsonPath('payment_summary.remaining', 450000)
+        ->assertJsonPath('transactions.0.transaction_status', 'settlement');
+
+    expect($transaction->fresh()->paid_at)->not->toBeNull();
 });
 
 it('creates a public Snap transaction for a scheduled pending booking', function () {

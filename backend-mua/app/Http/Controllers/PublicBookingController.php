@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Transactions\CreateSnapTransaction;
+use App\Actions\Transactions\HandleMidtransWebhook;
 use App\Http\Resources\PublicBookingResource;
 use App\Http\Resources\TransactionResource;
 use App\Models\Booking;
+use App\Services\MidtransTransactionStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Validation\ValidationException;
@@ -64,6 +66,30 @@ class PublicBookingController extends Controller
         $transaction = $createSnap->handle($booking, null, $type, $amount);
 
         return TransactionResource::make($transaction);
+    }
+
+    public function syncPaymentStatus(
+        Request $request,
+        Booking $booking,
+        MidtransTransactionStatus $midtransStatus,
+        HandleMidtransWebhook $handleWebhook,
+    ): PublicBookingResource {
+        $this->authorizeToken($request, $booking);
+
+        $transaction = $booking->transactions()
+            ->whereIn('transaction_status', ['pending', 'capture'])
+            ->latest()
+            ->first();
+
+        if ($transaction) {
+            $payload = $midtransStatus->fetch($transaction->order_id);
+            $handleWebhook->handle($payload);
+        }
+
+        return PublicBookingResource::make($booking->fresh()->load([
+            'bookingServices.service',
+            'transactions' => fn ($query) => $query->latest(),
+        ]));
     }
 
     private function authorizeToken(Request $request, Booking $booking): void

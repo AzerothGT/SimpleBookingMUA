@@ -35,6 +35,10 @@ export function createPublicSnapTransaction(id, token, type = 'dp') {
   return apiClient.post(`/public/bookings/${encodeURIComponent(id)}/transactions/snap?token=${encodeURIComponent(token)}&type=${encodeURIComponent(type)}`, {}, { auth: false })
 }
 
+export function syncPublicPaymentStatus(id, token) {
+  return apiClient.post(`/public/bookings/${encodeURIComponent(id)}/transactions/sync?token=${encodeURIComponent(token)}`, {}, { auth: false })
+}
+
 let snapLoader
 
 export function loadMidtransSnap() {
