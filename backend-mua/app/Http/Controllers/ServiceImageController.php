@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ActivityLogs\RecordActivity;
 use App\Actions\Services\SaveServiceImage;
 use App\Http\Requests\StoreServiceImageRequest;
 use App\Http\Requests\UpdateServiceImageRequest;
@@ -9,6 +10,7 @@ use App\Http\Resources\ServiceImageResource;
 use App\Models\Service;
 use App\Models\ServiceImage;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use OpenApi\Attributes as OA;
@@ -45,10 +47,18 @@ class ServiceImageController extends Controller
         StoreServiceImageRequest $request,
         Service $service,
         SaveServiceImage $saveImage,
+        RecordActivity $recordActivity,
     ): JsonResponse {
         Gate::authorize('update', $service);
 
         $serviceImage = $saveImage->create($service, $request->validated());
+
+        $recordActivity->handle(
+            $request->user(),
+            $service,
+            'service.image_added',
+            detail: "Image added to service {$service->name}.",
+        );
 
         return ServiceImageResource::make($serviceImage)->response()->setStatusCode(201);
     }
@@ -110,11 +120,18 @@ class ServiceImageController extends Controller
             new OA\Response(response: 401, description: 'Unauthenticated'),
         ]
     )]
-    public function destroy(Service $service, ServiceImage $serviceImage): Response
+    public function destroy(Service $service, ServiceImage $serviceImage, Request $request, RecordActivity $recordActivity): Response
     {
         Gate::authorize('update', $service);
 
         $serviceImage->delete();
+
+        $recordActivity->handle(
+            $request->user(),
+            $service,
+            'service.image_removed',
+            detail: "Image removed from service {$service->name}.",
+        );
 
         return response()->noContent();
     }

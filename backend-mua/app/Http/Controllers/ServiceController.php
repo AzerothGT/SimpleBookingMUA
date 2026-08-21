@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ActivityLogs\RecordActivity;
 use App\Actions\Services\UpdateService;
 use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
@@ -109,11 +110,18 @@ class ServiceController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ]
     )]
-    public function store(StoreServiceRequest $request): JsonResponse
+    public function store(StoreServiceRequest $request, RecordActivity $recordActivity): JsonResponse
     {
         Gate::authorize('create', Service::class);
 
         $service = Service::create($request->validated());
+
+        $recordActivity->handle(
+            $request->user(),
+            $service,
+            'service.created',
+            detail: "Service {$service->name} created.",
+        );
 
         return ServiceResource::make($service)->response()->setStatusCode(201);
     }
@@ -150,7 +158,7 @@ class ServiceController extends Controller
     ): ServiceResource {
         Gate::authorize('update', $service);
 
-        $service = $updateService->handle($service, $request->validated());
+        $service = $updateService->handle($service, $request->user(), $request->validated());
 
         return ServiceResource::make($service);
     }
@@ -168,9 +176,16 @@ class ServiceController extends Controller
             new OA\Response(response: 401, description: 'Unauthenticated'),
         ]
     )]
-    public function destroy(Service $service): Response
+    public function destroy(Service $service, Request $request, RecordActivity $recordActivity): Response
     {
         Gate::authorize('delete', $service);
+
+        $recordActivity->handle(
+            $request->user(),
+            $service,
+            'service.deleted',
+            detail: "Service {$service->name} deleted.",
+        );
 
         $service->delete();
 

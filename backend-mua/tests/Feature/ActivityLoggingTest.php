@@ -81,3 +81,76 @@ it('uses one consistent activity record per domain write', function () {
 
     expect(ActivityLog::where('action', 'booking.created')->count())->toBe(1);
 });
+
+it('records service creation with the authenticated actor', function () {
+    ['user' => $actor, 'token' => $token] = authenticatedSession();
+    $actor->update(['role' => 'admin']);
+
+    $response = $this->withToken($token)->postJson('/api/services', [
+        'name' => 'Wedding Makeup',
+        'price' => 1_500_000,
+    ])->assertCreated();
+
+    $log = ActivityLog::where('action', 'service.created')->firstOrFail();
+
+    expect($log->user_id)->toBe($actor->id)
+        ->and($log->entity_type)->toBe('service')
+        ->and($log->entity_id)->toBe($response->json('id'));
+});
+
+it('records service updates with before and after metadata', function () {
+    ['user' => $actor, 'token' => $token] = authenticatedSession();
+    $actor->update(['role' => 'admin']);
+    $service = Service::factory()->create(['name' => 'Old Name']);
+
+    $this->withToken($token)
+        ->patchJson('/api/services/'.$service->id, ['name' => 'New Name'])
+        ->assertSuccessful();
+
+    $log = ActivityLog::where('action', 'service.updated')->firstOrFail();
+
+    expect($log->user_id)->toBe($actor->id)
+        ->and($log->meta['before']['name'])->toBe('Old Name')
+        ->and($log->meta['after']['name'])->toBe('New Name');
+});
+
+it('records service deletion with the authenticated actor', function () {
+    ['user' => $actor, 'token' => $token] = authenticatedSession();
+    $actor->update(['role' => 'admin']);
+    $service = Service::factory()->create();
+
+    $this->withToken($token)
+        ->deleteJson('/api/services/'.$service->id)
+        ->assertNoContent();
+
+    $log = ActivityLog::where('action', 'service.deleted')->firstOrFail();
+
+    expect($log->user_id)->toBe($actor->id)
+        ->and($log->entity_type)->toBe('service')
+        ->and($log->entity_id)->toBe($service->id);
+});
+
+it('records service image additions and removals', function () {
+    ['user' => $actor, 'token' => $token] = authenticatedSession();
+    $actor->update(['role' => 'admin']);
+    $service = Service::factory()->create();
+
+    $created = $this->withToken($token)
+        ->postJson("/api/services/{$service->id}/serviceImages", [
+            'image_url' => 'https://images.example.test/service.jpg',
+            'image_source' => 'external',
+        ])
+        ->assertCreated();
+
+    expect(ActivityLog::where('action', 'service.image_added')->count())->toBe(1);
+
+    $this->withToken($token)
+        ->deleteJson("/api/services/{$service->id}/serviceImages/{$created->json('id')}")
+        ->assertNoContent();
+
+    $log = ActivityLog::where('action', 'service.image_removed')->firstOrFail();
+
+    expect($log->user_id)->toBe($actor->id)
+        ->and($log->entity_type)->toBe('service')
+        ->and($log->entity_id)->toBe($service->id);
+});
