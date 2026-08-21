@@ -243,7 +243,7 @@ export default function BookingPage() {
       const booking = created?.data ?? created
       const token = booking?.payment_access_token
       if (!booking?.id || !token) throw new Error('Booking berhasil dibuat, tetapi akses pelacakan tidak tersedia.')
-      const session = { bookingId: booking.id, token }
+      const session = { bookingId: booking.id, bookingCode: booking.booking_code ?? booking.id, token }
       window.localStorage.setItem('public_booking_session', JSON.stringify(session))
       setPublicSession(session)
       setPublicBooking(booking)
@@ -275,7 +275,7 @@ export default function BookingPage() {
 
   const copyBookingId = async () => {
     try {
-      await navigator.clipboard.writeText(publicSession.bookingId)
+      await navigator.clipboard.writeText(publicSession.bookingCode ?? publicSession.bookingId)
       setCopyState('success')
       window.setTimeout(() => setCopyState('idle'), 2000)
     } catch {
@@ -361,7 +361,7 @@ export default function BookingPage() {
         <span className="eyebrow">Pengajuan terkirim</span><div className="success-mark" aria-hidden="true"><svg className="success-check" viewBox="0 0 32 32" fill="none"><path d="M7 16.5 13 22 25 10" pathLength="1" /></svg></div>
         <h1>{paid ? 'Pembayaran berhasil.' : scheduled ? 'Jadwal sudah tersedia.' : 'Booking berhasil dibuat.'}</h1>
         <p>{paid ? 'Pembayaran sedang tercatat di sistem.' : scheduled ? 'Jadwal booking sudah dikonfirmasi oleh tim kami.' : 'Tim kami akan mengonfirmasi bookingan dan segera menghubungi kamu.'}</p>
-        <div className="public-booking-status"><span className="detail-label">Booking ID</span><div className="public-booking-id-row"><strong>{publicSession.bookingId}</strong><button className="copy-booking-id" type="button" onClick={copyBookingId} aria-label={copyState === 'success' ? 'Booking ID tersalin' : `Salin booking ID ${publicSession.bookingId}`} title={copyState === 'success' ? 'Tersalin' : 'Salin booking ID'}>{copyState === 'success' ? <CheckIcon size={16} weight="bold" aria-hidden="true" /> : <CopyIcon size={16} weight="bold" aria-hidden="true" />}</button></div>{copyState === 'error' && <p className="copy-booking-id-error" role="alert">Tidak dapat menyalin otomatis. Pilih booking ID secara manual.</p>}<span className="detail-label">Status</span><strong>{publicBooking?.status ?? 'pending'}</strong>{scheduled && <><span className="detail-label">Jadwal mulai</span><strong>{new Date(publicBooking.starts_at).toLocaleString('id-ID')}</strong></>}</div>
+        <div className="public-booking-status"><span className="detail-label">Booking code</span><div className="public-booking-id-row"><strong>{publicSession.bookingCode ?? publicSession.bookingId}</strong><button className="copy-booking-id" type="button" onClick={copyBookingId} aria-label={copyState === 'success' ? 'Booking code tersalin' : `Salin booking code ${publicSession.bookingCode ?? publicSession.bookingId}`} title={copyState === 'success' ? 'Tersalin' : 'Salin booking code'}>{copyState === 'success' ? <CheckIcon size={16} weight="bold" aria-hidden="true" /> : <CopyIcon size={16} weight="bold" aria-hidden="true" />}</button></div>{copyState === 'error' && <p className="copy-booking-id-error" role="alert">Tidak dapat menyalin otomatis. Pilih booking code secara manual.</p>}<span className="detail-label">Status</span><strong>{publicBooking?.status ?? 'pending'}</strong>{scheduled && <><span className="detail-label">Jadwal mulai</span><strong>{new Date(publicBooking.starts_at).toLocaleString('id-ID')}</strong></>}</div>
         {publicError && <div className="login-error" role="alert">{publicError}</div>}
         {!paid && scheduled && <button className="button button-primary" disabled={paymentLoading} onClick={() => navigate(`/payment?booking=${encodeURIComponent(publicSession.bookingId)}&token=${encodeURIComponent(publicSession.token)}`)}>Buka pembayaran</button>}
         <button className="button button-secondary" onClick={resetBooking}>Kembali ke halaman utama</button>
