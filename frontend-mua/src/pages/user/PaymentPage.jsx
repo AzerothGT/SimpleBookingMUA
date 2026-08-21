@@ -117,7 +117,8 @@ export default function PaymentPage() {
               <p>{paymentProgress === 0 ? 'Belum ada pembayaran. Mulai dari DP untuk mengamankan jadwal.' : remaining === 0 ? `${formatCurrency(paid)} sudah dibayar. Tidak ada sisa tagihan.` : `${formatCurrency(paid)} dari ${formatCurrency(summary?.total)} sudah dibayar. Sisa ${formatCurrency(remaining)}.`}</p>
             </div>
             <div className="public-booking-status">
-              <span className="detail-label">Booking ID</span><strong>{booking.id}</strong>
+              <span className="detail-label">Klien</span><strong>{booking.client_name ?? '—'}</strong>
+              <span className="detail-label">Kode booking</span><strong>{booking.id}</strong>
               <span className="detail-label">Layanan</span>{booking.services?.map((service) => <div className="detail-line" key={service.id}><span>{service.name} × {service.qty}</span><strong>{formatCurrency(service.subtotal)}</strong></div>)}
               <div className="detail-line"><span>Total layanan</span><strong>{formatCurrency(summary?.total)}</strong></div>
               <div className="detail-line"><span>Sudah dibayar</span><strong>{formatCurrency(paid)}</strong></div>

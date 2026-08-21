@@ -28,6 +28,7 @@ class PublicBookingResource extends JsonResource
         return [
             'id' => $this->booking_code ?? $this->id,
             'status' => $this->status,
+            'client_name' => $this->client_name,
             'client_requested_date' => $this->client_requested_date?->toDateString(),
             'client_requested_end_time' => $this->client_requested_end_time,
             'starts_at' => $this->starts_at,
