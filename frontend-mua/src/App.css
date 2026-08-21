@@ -19,7 +19,7 @@
   --space-12: 3rem;
 }
 
-@layer components {
+
   .site-header { @apply mx-auto flex max-w-[1240px] items-center justify-between px-10 py-7; }
   .brand { @apply border-0 bg-transparent p-0 text-[17px] font-extrabold tracking-[-.04em] no-underline; color: var(--ink); }
   .location-label, .eyebrow, .step-counter, .step-kicker, .pending-pill, .art-caption { @apply font-mono text-[.625rem] uppercase leading-[1.5] tracking-[.08em]; color: var(--muted); }
@@ -288,9 +288,7 @@
   .copy-booking-id:hover, .copy-booking-id:focus-visible { background: var(--lime); outline: 0; }
   .copy-booking-id-error { @apply col-span-2 m-0 text-xs; color: #9b4640; }
   .success-card .button { @apply mt-1; }
-}
 
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* unlayered: must beat the unlayered .button-primary margin in the media queries below */
 .form-actions .button { margin-top: 0; }
