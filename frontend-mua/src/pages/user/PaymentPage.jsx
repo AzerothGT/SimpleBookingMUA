@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ArrowLeftIcon, CheckCircleIcon, CreditCardIcon, WarningCircleIcon } from '@phosphor-icons/react'
-import { createPublicSnapTransaction, getPublicBookingStatus, loadMidtransSnap } from '../../api/bookingApi'
+import { createPublicSnapTransaction, getPublicBookingStatus } from '../../api/bookingApi'
 
 
 function formatCurrency(value) {
@@ -63,16 +63,7 @@ export default function PaymentPage() {
     try {
       const payload = await createPublicSnapTransaction(bookingId, token, type)
       const transaction = unwrap(payload)
-      if (transaction.snap_token) {
-        try {
-          const snap = await loadMidtransSnap()
-          const refreshStatus = () => { setPaymentLoading(''); refresh() }
-          snap.pay(transaction.snap_token, { onClose: refreshStatus, onSuccess: refreshStatus, onPending: refreshStatus, onError: refreshStatus })
-        } catch (snapError) {
-          if (transaction.redirect_url) window.location.assign(transaction.redirect_url)
-          else throw snapError
-        }
-      } else if (transaction.redirect_url) {
+      if (transaction.redirect_url) {
         window.location.assign(transaction.redirect_url)
       } else {
         throw new Error('Tautan pembayaran belum tersedia.')
