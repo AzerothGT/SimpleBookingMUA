@@ -7,13 +7,12 @@ import AdminLayout from '../../components/AdminLayout'
 import PaymentStatusBadge from '../../components/PaymentStatusBadge'
 import { getPaymentState } from './paymentStatus'
 import ConfirmDialog from '../../components/ConfirmDialog'
-import StatusBadge from '../../components/StatusBadge'
 import { getStoredSession } from '../../session'
 import { useToast } from '../../context/useToast'
 import { assignAdminBooking, createAdminPaymentLink, deleteAdminBooking, formatCurrency, getAdminBooking, listAdminBookings, listAdminUsers, updateAdminBooking, unwrap, unwrapList } from '../../api/adminApi'
 import { formatBookingStaff } from './bookingStaff'
 
-const statusOptions = [['', 'Semua status'], ['pending', 'Menunggu jadwal'], ['confirmed', 'Terkonfirmasi'], ['done', 'Selesai'], ['cancelled', 'Dibatalkan']]
+const paymentOptions = [['', 'Semua pembayaran'], ['none', 'Belum ada pembayaran'], ['pending', 'Menunggu pembayaran'], ['paid', 'Lunas'], ['failed', 'Pembayaran gagal'], ['expired', 'Kedaluwarsa'], ['refunded', 'Dana dikembalikan']]
 const formatDate = (value) => value ? value.split('-').reverse().join('-') : '—'
 const formatDateTime = (value) => new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
 const paymentTypeLabels = { bank_transfer: 'Transfer bank', qris: 'QRIS', gopay: 'GoPay', shopeepay: 'ShopeePay', credit_card: 'Kartu kredit', echannel: 'Mandiri Bill', cstore: 'Gerai retail' }
@@ -21,7 +20,8 @@ const getError = (error) => error?.status === 401 ? 'Sesi login berakhir. Silaka
 
 export default function BookingsPage() {
   const [rows, setRows] = useState([])
-  const [filters, setFilters] = useState({ status: '', client_name: '', client_phone: '' })
+  const [filters, setFilters] = useState({ client_name: '', client_phone: '' })
+  const [paymentFilter, setPaymentFilter] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(null)
@@ -78,18 +78,20 @@ export default function BookingsPage() {
   const saveBooking = (body) => mutate(async () => { await updateAdminBooking(selected.id, body.details); return assignAdminBooking(selected.id, body.schedule) })
 
   const columns = useMemo(() => [
-    { key: 'client_name', label: 'Klien', render: (row) => <strong>{row.client_name}</strong> },
     { key: 'booking_code', label: 'Booking code', render: (row) => <span className="booking-code-cell">{row.booking_code ?? '—'}</span> },
+    { key: 'client_name', label: 'Klien', render: (row) => <strong>{row.client_name}</strong> },
     { key: 'requested', label: 'Pengajuan', render: (row) => <span>{formatDate(row.client_requested_date)}<small>{row.client_requested_end_time}</small></span> },
     { key: 'services', label: 'Layanan', render: (row) => <span className="booking-services-cell">{(row.services ?? []).map((service) => service.name).join(', ') || '—'}</span> },
     { key: 'staff', label: 'Staff', render: (row) => formatBookingStaff(row) },
-    { key: 'status', label: 'Status', render: (row) => <StatusBadge status={row.status} /> },
+    { key: 'status', label: 'Status', render: (row) => <PaymentStatusBadge state={getPaymentState(row.transactions).key} /> },
     { key: 'actions', label: 'Aksi', render: (row) => <button className="table-action" type="button" onClick={() => openBooking(row.id)} aria-label={`Lihat detail booking ${row.client_name}`} title="Lihat detail"><EyeIcon size={15} aria-hidden="true" /></button> },
   ], [openBooking])
 
+  const visibleRows = useMemo(() => paymentFilter ? rows.filter((row) => getPaymentState(row.transactions).key === paymentFilter) : rows, [rows, paymentFilter])
+
   return <AdminLayout title="Booking" description="Kelola pengajuan, jadwal, dan status pekerjaan." onRefresh={loadBookings} isLoading={isLoading} action={<Link className="admin-button admin-button-primary" to="/booking"><PlusIcon size={16} /> Booking publik</Link>}>
-    <div className="admin-toolbar"><div><span className="eyebrow">Filter data</span><h2>Daftar booking</h2></div><div className="admin-filters"><select value={filters.status} onChange={(event) => setFilters({ ...filters, status: event.target.value })} aria-label="Filter status">{statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input value={filters.client_name} onChange={(event) => setFilters({ ...filters, client_name: event.target.value })} placeholder="Cari nama klien" aria-label="Cari nama klien" /><input value={filters.client_phone} onChange={(event) => setFilters({ ...filters, client_phone: event.target.value })} placeholder="Nomor telepon" aria-label="Cari nomor telepon" /></div></div>
-    <AdminDataTable columns={columns} rows={rows} isLoading={isLoading} error={error} onRetry={loadBookings} emptyMessage="Belum ada booking yang cocok." />
+    <div className="admin-toolbar"><div><span className="eyebrow">Filter data</span><h2>Daftar booking</h2></div><div className="admin-filters"><select value={paymentFilter} onChange={(event) => setPaymentFilter(event.target.value)} aria-label="Filter status pembayaran">{paymentOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><input value={filters.client_name} onChange={(event) => setFilters({ ...filters, client_name: event.target.value })} placeholder="Cari nama klien" aria-label="Cari nama klien" /><input value={filters.client_phone} onChange={(event) => setFilters({ ...filters, client_phone: event.target.value })} placeholder="Nomor telepon" aria-label="Cari nomor telepon" /></div></div>
+    <AdminDataTable columns={columns} rows={visibleRows} isLoading={isLoading} error={error} onRetry={loadBookings} emptyMessage="Belum ada booking yang cocok." />
     <AdminDrawer open={Boolean(selected)} title={selected?.client_name ?? 'Booking'} onClose={() => setSelected(null)}>
       {drawerLoading ? <div className="admin-state">Memuat detail...</div> : selected && <BookingDetail booking={selected} staff={staff} role={sessionUser?.role ?? 'staff'} onSave={saveBooking} onDelete={() => setConfirmOpen(true)} onSendPaymentLink={sendPaymentLink} />}
     </AdminDrawer>
