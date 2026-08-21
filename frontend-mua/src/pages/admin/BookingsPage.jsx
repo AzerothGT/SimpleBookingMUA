@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CalendarBlankIcon, ClockIcon, EyeIcon, PaintBrushIcon, PencilSimpleIcon, PlusIcon, TrashIcon, FloppyDiskIcon, WhatsappLogoIcon, UserPlusIcon } from '@phosphor-icons/react'
+import { CalendarBlankIcon, ClockIcon, EyeIcon, PaintBrushIcon, PlusIcon, TrashIcon, FloppyDiskIcon, WhatsappLogoIcon, UserPlusIcon } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 import AdminDataTable from '../../components/AdminDataTable'
 import AdminDrawer from '../../components/AdminDrawer'
@@ -15,6 +15,12 @@ import { formatBookingStaff } from './bookingStaff'
 const paymentOptions = [['', 'Semua pembayaran'], ['none', 'Belum ada pembayaran'], ['pending', 'Menunggu pembayaran'], ['paid', 'Lunas'], ['failed', 'Pembayaran gagal'], ['expired', 'Kedaluwarsa'], ['refunded', 'Dana dikembalikan']]
 const formatDate = (value) => value ? value.split('-').reverse().join('-') : '—'
 const formatDateTime = (value) => new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
+const toLocalTimeInput = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
 const paymentTypeLabels = { bank_transfer: 'Transfer bank', qris: 'QRIS', gopay: 'GoPay', shopeepay: 'ShopeePay', credit_card: 'Kartu kredit', echannel: 'Mandiri Bill', cstore: 'Gerai retail' }
 const getError = (error) => error?.status === 401 ? 'Sesi login berakhir. Silakan masuk kembali.' : error?.payload?.message ?? error?.message ?? 'Permintaan gagal diproses.'
 
@@ -104,9 +110,9 @@ function BookingDetail({ booking, staff, role, onSave, onDelete, onSendPaymentLi
   const [notes, setNotes] = useState(booking.notes ?? '')
   const [address, setAddress] = useState(booking.client_address ?? '')
 
-  const legacyAssignment = booking.user_id ? [{ user_id: booking.user_id, starts_at: booking.starts_at?.slice(11, 16) ?? '' }] : []
-  const [assignments, setAssignments] = useState(() => (booking.staff_schedules?.length ? booking.staff_schedules.map((schedule) => ({ user_id: schedule.user_id, starts_at: schedule.starts_at?.slice(11, 16) ?? '' })) : legacyAssignment))
-  const [endsAt, setEndsAt] = useState(booking.ends_at ? booking.ends_at.slice(11, 16) : '')
+  const legacyAssignment = booking.user_id ? [{ user_id: booking.user_id, starts_at: toLocalTimeInput(booking.starts_at) }] : []
+  const [assignments, setAssignments] = useState(() => (booking.staff_schedules?.length ? booking.staff_schedules.map((schedule) => ({ user_id: schedule.user_id, starts_at: toLocalTimeInput(schedule.starts_at) })) : legacyAssignment))
+  const [endsAt, setEndsAt] = useState(toLocalTimeInput(booking.ends_at))
   const canManageSchedule = role === 'owner' || role === 'admin'
   const canSave = canManageSchedule && Boolean(assignments.length && endsAt && assignments.every((assignment) => assignment.user_id && assignment.starts_at) && new Set(assignments.map((assignment) => assignment.user_id)).size === assignments.length)
   const buildScheduleDate = (time) => new Date(`${booking.client_requested_date}T${time}:00`).toISOString()
