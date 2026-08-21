@@ -74,4 +74,5 @@ Route::middleware('auth.session')->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::post('/webhooks/midtrans', [TransactionController::class, 'webhook']);
+Route::post('/webhooks/midtrans', [TransactionController::class, 'webhook'])
+    ->middleware('throttle:120,1');
