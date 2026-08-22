@@ -95,11 +95,11 @@ Sebelum mengirim, tampilkan ringkasan yang dapat diperiksa dan diubah:
 - alamat makeup;
 - catatan tambahan.
 
-Tombol akhir: **Kirim pengajuan booking**
+Tombol akhir: **Kirim**
 
 Teks pendamping tombol:
 
-> Dengan mengirim pengajuan, kamu memahami bahwa status awal booking adalah **pending**. Staff akan mengecek jadwal, menentukan jam mulai aktual, dan mengonfirmasi detail pembayaran.
+> Dengan mengirim pengajuan, kamu memahami bahwa booking masih ditinjau staf. Kamu akan menerima link pembayaran setelah jadwal ditetapkan, dan bisa melacaknya lewat booking code.
 
 ---
 
@@ -107,14 +107,16 @@ Teks pendamping tombol:
 
 ### Success state
 
-**Pengajuan booking diterima — status pending.**
+**Pengajuan booking diterima.**
+
+Kamu langsung mendapat **booking code** (mis. `PRSDJ6FM`) beserta link tracking untuk memantau status pembayaran.
 
 Langkah berikutnya:
 
 1. Staff `[Nama MUA]` meninjau tanggal, layanan, dan lokasi.
 2. Staff menentukan jam mulai aktual berdasarkan kebutuhan layanan dan jadwal.
-3. Kamu menerima instruksi pembayaran melalui Midtrans setelah jadwal ditetapkan.
-4. Konfirmasi akhir diberikan setelah jadwal, pembayaran, dan detail booking diselesaikan.
+3. Kamu menerima link pembayaran Midtrans via WhatsApp, atau langsung dari halaman sukses.
+4. Status pembayaran ter-update secara real-time setelah pembayaran selesai.
 
 Waktu respons: `[waktu respons konfirmasi]`.
 

@@ -1,6 +1,6 @@
 # SimpleBookingMUA — Presentasi Final Project (PPT Outline)
 
-> Catatan: Rencana keseluruhan = full-stack **Laravel + React**. Pada checkpoint ini **backend (Laravel REST API) selesai & dapat dievaluasi**; **frontend React = fase berikutnya, belum diimplementasikan**.
+> Catatan: Full-stack **Laravel + React**. Backend (Laravel REST API) dan frontend (React SPA) sudah selesai dan saling terintegrasi.
 
 ---
 
@@ -29,9 +29,9 @@
 
 ## Slide 2 — Overview Project
 
-- **SimpleBookingMUA** — REST API booking Makeup Artist (MUA) dengan Laravel.
+- **SimpleBookingMUA** — REST API booking Makeup Artist (MUA) dengan Laravel + React SPA.
 - Final Project Dibimbing Bootcamp — Full Stack Web Developer.
-- Fase backend selesai; frontend React fase berikutnya.
+- Backend dan frontend sudah terintegrasi dan berjalan.
 
 **Capaian backend:**
 - REST API terstruktur + dokumentasi OpenAPI otomatis.
@@ -40,6 +40,13 @@
 - Integrasi Midtrans + verifikasi webhook.
 - Audit trail otomatis.
 - Test suite Pest.
+
+**Capaian frontend:**
+- React + Vite + Tailwind, React Router.
+- Booking publik tanpa akun (aliran 4 langkah) + kalender ketersediaan.
+- Halaman pembayaran Midtrans Snap dengan status pembayaran real-time.
+- Dashboard admin: metrics, agenda, daftar booking, manajemen layanan/pengguna, audit log.
+- Booking code publik sebagai identitas tracking (bukan ID internal).
 
 ---
 
@@ -85,28 +92,23 @@
 
 ```mermaid
 flowchart TD
-    A[Client akses endpoint publik] --> B[GET /api/services]
-    B --> C{Cek jadwal?}
-    C -->|Ya| D[POST /api/schedule/check]
-    D --> E{Slot kosong?}
-    E -->|Tidak| C
-    E -->|Ya| F[POST /api/bookings]
-    C -->|Tidak| F
-    F --> G[pending]
-    G --> H[Staff login]
-    H --> I[Assign starts_at]
-    I --> J{Overlap?}
-    J -->|Ya| K[Pilih jam lain]
-    K --> I
-    J -->|Tidak| L[confirmed]
-    L --> M[Pembayaran]
-    M --> N[Midtrans Snap]
-    N --> O[Webhook + verifikasi signature]
-    O --> P{Valid?}
-    P -->|Tidak| Q[Tolak]
-    P -->|Ya| R[Update status bayar]
-    R --> T[done]
-    T --> U[Audit trail tercatat]
+    A[Client buka halaman booking] --> B[Pilih layanan]
+    B --> C[Pilih tanggal + cek ketersediaan]
+    C --> D[Isi detail: nama, telepon, jam selesai, alamat]
+    D --> E[Kirim booking]
+    E --> F[pending + dapat booking_code]
+    F --> G[Staff login, assign starts_at + ends_at]
+    G --> H{Overlap?}
+    H -->|Ya| G
+    H -->|Tidak| I[confirmed]
+    I --> J[Kirim link pembayaran via WhatsApp]
+    J --> K[Client bayar di halaman pembayaran Midtrans Snap]
+    K --> L[Webhook + verifikasi signature]
+    L --> M{Valid?}
+    M -->|Tidak| N[Tolak]
+    M -->|Ya| O[Status pembayaran: settlement/paid]
+    O --> P[Pekerjaan selesai, status done]
+    P --> Q[Audit trail tercatat]
 ```
 
 ---
@@ -132,14 +134,19 @@ stateDiagram-v2
 |---|---|---|
 | Runtime | PHP 8.3+ | Modern, cepat, typed properties |
 | Framework | Laravel 13 | REST API + Eloquent + middleware + validasi bawaan |
+| Frontend | React 19 + Vite | SPA cepat, komponen reusable, dev server responsif |
+| Styling | Tailwind CSS 4 | Utility-first, token tema terpusat, cepat iterasi |
+| Routing | React Router 7 | Routing deklaratif + guard per-role |
 | Database | MySQL 8+ | ACID, trigger, CHECK constraint → integritas transaksi |
 | Auth | Sanctum | Bearer token sederhana, cocok untuk API stateless |
 | Payment | Midtrans Snap | Gateway lokal populer + webhook signature SHA-512 |
 | Docs | l5-swagger + OpenAPI attribute | Swagger otomatis dari kode, bukan YAML manual |
 | Test | Pest 5 | Ekspresif, modern, minim boilerplate |
-| Style | Laravel Pint | Format konsisten otomatis |
+| Style | Laravel Pint + oxlint | Format konsisten otomatis |
 
 **Mengapa Laravel?** Ecosystem lengkap (ORM, migration, validasi, Policy, Sanctum) + convention over configuration → cepat build API terstruktur.
+
+**Mengapa React + Tailwind?** SPA interaktif untuk booking dengan komponen reusable; Tailwind mempercepat styling konsisten dengan token desain.
 
 **Mengapa MySQL?** Butuh trigger + CHECK constraint untuk jaminan integritas di level DB (satu cover per service, role valid).
 
@@ -171,7 +178,22 @@ app/
 
 ## Slide 10 — Detail Website
 
-**Status UI:** Frontend React belum diimplementasikan pada checkpoint ini → wireframe/mockup menyusul fase frontend.
+Frontend React sudah terimplementasi dan terintegrasi dengan backend.
+
+**Halaman publik:**
+- `/` — Hero + CTA booking.
+- `/services` — Katalog layanan (foto, harga, galeri).
+- `/booking` — Form booking 4 langkah: pilih layanan → pilih tanggal (dengan kalender ketersediaan) → isi detail → kirim.
+- `/payment` — Pembayaran Midtrans Snap, dengan status pembayaran real-time dan ringkasan biaya.
+
+**Halaman admin (login terlebih dahulu):**
+- `/admin` — Dashboard: metrics, agenda hari ini, booking terbaru (dengan status pembayaran).
+- `/admin/bookings` — Kelola booking: jadwalkan staff, atur jam, kirim link pembayaran via WhatsApp.
+- `/admin/services` — CRUD layanan + galeri foto.
+- `/admin/users` — Manajemen akun tim (khusus admin/owner).
+- `/admin/activity` — Audit trail perubahan.
+
+**Identitas tracking:** setiap booking mendapat `booking_code` publik (mis. `PRSDJ6FM`) yang dipakai untuk melacak status — bukan ID internal.
 
 **Dokumentasi visual tersedia:**
 - Swagger UI: `GET /api/documentation`
@@ -185,6 +207,7 @@ app/
 | `GET` | `/api/services` | Lihat katalog service |
 | `POST` | `/api/bookings` | Buat booking (publik) |
 | `POST` | `/api/schedule/check` | Cek ketersediaan jadwal |
+| `GET` | `/api/public/bookings/{id}/status` | Lacak status & ringkasan pembayaran |
 
 ---
 
@@ -192,7 +215,8 @@ app/
 
 1. **Perencanaan** — masalah, target user, state machine, skema DB.
 2. **Desain** — arsitektur Controller–Action–Policy–Resource + Contract payment.
-3. **Pengembangan** — model, migration, Action, middleware, Policy, Resource, Service Midtrans.
+3. **Pengembangan backend** — model, migration, Action, middleware, Policy, Resource, Service Midtrans.
+4. **Pengembangan frontend** — halaman React, integrasi API, kalender, Snap, dashboard admin.
 4. **Pengujian** — Pest: feature test, race condition paralel, webhook signature, authorization.
 5. **Peluncuran** — Swagger UI + seed data demo.
 
@@ -214,9 +238,13 @@ app/
 
 ## Slide 13 — Tautan & Demo
 
-- **GitHub:** SimpleBookingMUA (backend-mua)
+- **GitHub:** SimpleBookingMUA
+- **Frontend:** `/` (booking publik), `/admin` (dashboard, login required)
 - **Swagger:** `GET /api/documentation`
 - **OpenAPI JSON:** `GET /docs`
 - **Akun seed (password `password123`):** `owner`, `admin`, `staff1`, `staff2`
 
-**Endpoint demo:** `POST /api/login`, `GET /api/services`, `POST /api/bookings`, `POST /api/schedule/check`
+**Demo yang disarankan:**
+1. Booking publik dari halaman `/` → dapat `booking_code`.
+2. Login ke `/admin` → assign staff + jam di booking, kirim link WhatsApp.
+3. Buka `/payment` → bayar via Snap → status pembayaran ter-update real-time.
