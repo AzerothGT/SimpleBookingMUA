@@ -89,7 +89,7 @@ export default function BookingsPage() {
     { key: 'requested', label: 'Pengajuan', render: (row) => <span>{formatDate(row.client_requested_date)}<small>{row.client_requested_end_time}</small></span> },
     { key: 'services', label: 'Layanan', render: (row) => <span className="booking-services-cell">{(row.services ?? []).map((service) => service.name).join(', ') || '—'}</span> },
     { key: 'staff', label: 'Staff', className: 'table-col-staff', render: (row) => formatBookingStaff(row) },
-    { key: 'status', label: 'Status', className: 'table-col-status', render: (row) => <PaymentStatusBadge state={getPaymentState(row.transactions).key} /> },
+    { key: 'status', label: 'Status pembayaran', className: 'table-col-status', render: (row) => <PaymentStatusBadge state={getPaymentState(row.transactions).key} /> },
     { key: 'actions', label: 'Aksi', className: 'table-col-actions', render: (row) => <button className="table-action" type="button" onClick={() => openBooking(row.id)} aria-label={`Lihat detail booking ${row.client_name}`} title="Lihat detail"><EyeIcon size={15} aria-hidden="true" /></button> },
   ], [openBooking])
 
